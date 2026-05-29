@@ -43,12 +43,29 @@ Those belong to later phases.
 │   ├── table/
 │   ├── form/
 │   └── ...
+├── docs/
+│   ├── getting-started.md
+│   └── rule-authoring-guide.md
+├── examples/
+│   └── prompts/
 ├── system-rules/
 │   └── component-architecture/
 ├── ROADMAP.md
 ├── LICENSE
 └── README.md
 ```
+
+## Getting Started
+
+Recommended entry points:
+
+- [Getting Started](./docs/getting-started.md): how to read and use the repository.
+- [快速开始](./docs/getting-started.zh.md): 中文使用入口。
+- [Rule Authoring Guide](./docs/rule-authoring-guide.md): how to add or update rules.
+- [规则写作指南](./docs/rule-authoring-guide.zh.md): 中文规则维护指南。
+- [Prompt Examples](./examples/prompts/README.md): prompt templates for AI coding tools.
+- [All AI Rules Entry](./component-rules/_ai-bundles/all-ai-rules.md): top-level AI rules loading guide.
+- [AI 规则总入口](./component-rules/_ai-bundles/all-ai-rules.zh.md): 中文 AI 规则加载入口。
 
 ## Rule File Convention
 
@@ -99,6 +116,7 @@ Use bundles when asking AI to generate or review a full interaction pattern.
 
 Available bundles:
 
+- [All AI Rules Entry](./component-rules/_ai-bundles/all-ai-rules.md)
 - [Core Foundation](./component-rules/_ai-bundles/core-foundation-ai-bundle.md)
 - [List CRUD](./component-rules/_ai-bundles/list-crud-ai-bundle.md)
 - [Form Overlay](./component-rules/_ai-bundles/form-overlay-ai-bundle.md)
@@ -130,10 +148,11 @@ Planned system rules:
 For AI-assisted page generation:
 
 ```text
-1. Load core-foundation-ai-bundle.
-2. Load the scenario bundle, such as list-crud-ai-bundle.
-3. Load specific module AI rules when needed.
-4. Use human-readable rules for review and refinement.
+1. Load all-ai-rules as the top-level guide.
+2. Load core-foundation-ai-bundle.
+3. Load the scenario bundle, such as list-crud-ai-bundle.
+4. Load specific module AI rules when needed.
+5. Use human-readable rules for review and refinement.
 ```
 
 For team discussion:
@@ -144,6 +163,13 @@ For team discussion:
 3. Update the matching AI rule file.
 4. Update bundles if the change affects generation behavior.
 ```
+
+For prompt examples:
+
+- [Generate User Management List](./examples/prompts/generate-user-management-list.md)
+- [Generate Dialog Form](./examples/prompts/generate-dialog-form.md)
+- [Generate Import Workflow](./examples/prompts/generate-import-workflow.md)
+- [Review B2B Console Page](./examples/prompts/review-b2b-console-page.md)
 
 ## MVP Status
 

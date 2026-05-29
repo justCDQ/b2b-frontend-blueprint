@@ -12,6 +12,8 @@ Use English bundles for code-generation prompts. Use Chinese module rules when t
 
 | Bundle | Use for |
 |---|---|
+| `all-ai-rules.md` | Top-level AI loading guide for generation and review. |
+| `all-ai-rules.zh.md` | Chinese top-level AI loading guide for generation and review. |
 | `core-foundation-ai-bundle.md` | Baseline 2B interaction rules. |
 | `list-crud-ai-bundle.md` | CRUD list page generation/review. |
 | `form-overlay-ai-bundle.md` | Form + dialog/drawer/detail edit flows. |
@@ -23,7 +25,8 @@ Use English bundles for code-generation prompts. Use Chinese module rules when t
 
 ## How To Use
 
-1. Pick the closest bundle.
-2. Load the referenced AI rule files.
-3. Add one or two component-specific AI rules if the task has a special surface.
-4. Prefer the module's human-readable rules when judgment or discussion is needed.
+1. Start with `all-ai-rules.md` when the task is broad or page-level.
+2. Pick the closest scenario bundle.
+3. Load the referenced AI rule files.
+4. Add one or two component-specific AI rules if the task has a special surface.
+5. Prefer the module's human-readable rules when judgment or discussion is needed.

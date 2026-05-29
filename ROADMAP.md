@@ -9,6 +9,10 @@ Status: done.
 - AI-executable English and Chinese rules.
 - AI rule bundles.
 - Component architecture system rule.
+- Getting started documentation.
+- Rule authoring guide.
+- Prompt examples for AI coding tools.
+- Top-level AI rules entry.
 
 ## Phase 2: System Rules
 
