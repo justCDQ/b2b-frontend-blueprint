@@ -169,7 +169,7 @@ Card 内容必须有优先级，不要渲染所有可用字段。
 示例：
 
 ```text
-Owner: Rebecca
+Owner: 小明
 Last sync: 2h ago
 Usage: 42 requests
 Cost: $128.00

@@ -19,3 +19,8 @@ They are intentionally framework-neutral. Add your project stack, file paths, an
 4. Add your technology stack and existing component library.
 5. Ask AI to generate or review against the rules.
 
+## Related Page Blueprints
+
+- [User Management](../pages/user-management.md)
+- [Import Records](../pages/import-records.md)
+- [Project Settings Detail](../pages/settings-detail.md)

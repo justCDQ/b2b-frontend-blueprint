@@ -169,7 +169,7 @@ Rules:
 Examples:
 
 ```text
-Owner: Rebecca
+Owner: 小明
 Last sync: 2h ago
 Usage: 42 requests
 Cost: $128.00

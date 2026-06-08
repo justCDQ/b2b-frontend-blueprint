@@ -13,6 +13,7 @@ Status: done.
 - Rule authoring guide.
 - Prompt examples for AI coding tools.
 - Top-level AI rules entry.
+- Page demo blueprints: User Management, Import Records, Project Settings Detail.
 
 ## Phase 2: System Rules
 
@@ -33,7 +34,7 @@ Planned:
 
 Goal: turn rules into a concrete frontend project blueprint.
 
-Planned:
+Status: draft started.
 
 - Source directory conventions.
 - Component layering.
@@ -42,6 +43,8 @@ Planned:
 - Permission contracts.
 - API contract examples.
 - Demo module conventions.
+- Monorepo package boundaries.
+- MVP implementation plan.
 
 ## Phase 4: Demo App
 

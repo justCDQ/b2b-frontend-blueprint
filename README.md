@@ -63,7 +63,12 @@ Recommended entry points:
 - [快速开始](./docs/getting-started.zh.md): 中文使用入口。
 - [Rule Authoring Guide](./docs/rule-authoring-guide.md): how to add or update rules.
 - [规则写作指南](./docs/rule-authoring-guide.zh.md): 中文规则维护指南。
+- [Template Architecture](./docs/template-architecture.md): future monorepo and package architecture.
+- [模板架构蓝图](./docs/template-architecture.zh.md): 未来代码模板的工程结构。
+- [MVP Implementation Plan](./docs/mvp-implementation-plan.md): first runnable code MVP plan.
+- [MVP 实施计划](./docs/mvp-implementation-plan.zh.md): 第一版可运行代码 MVP 执行计划。
 - [Prompt Examples](./examples/prompts/README.md): prompt templates for AI coding tools.
+- [Page Demo Blueprints](./examples/pages/README.md): page-level demo specifications.
 - [All AI Rules Entry](./component-rules/_ai-bundles/all-ai-rules.md): top-level AI rules loading guide.
 - [AI 规则总入口](./component-rules/_ai-bundles/all-ai-rules.zh.md): 中文 AI 规则加载入口。
 
@@ -171,6 +176,15 @@ For prompt examples:
 - [Generate Import Workflow](./examples/prompts/generate-import-workflow.md)
 - [Review B2B Console Page](./examples/prompts/review-b2b-console-page.md)
 
+For page demo blueprints:
+
+- [User Management](./examples/pages/user-management.md)
+- [用户管理](./examples/pages/user-management.zh.md)
+- [Import Records](./examples/pages/import-records.md)
+- [导入任务](./examples/pages/import-records.zh.md)
+- [Project Settings Detail](./examples/pages/settings-detail.md)
+- [项目设置详情](./examples/pages/settings-detail.zh.md)
+
 ## MVP Status
 
 Current MVP includes:
@@ -180,6 +194,7 @@ Current MVP includes:
 - English and Chinese versions.
 - AI bundle entry points.
 - Initial component architecture system rule.
+- First page demo blueprint.
 
 See [ROADMAP.md](./ROADMAP.md) for planned phases.
 

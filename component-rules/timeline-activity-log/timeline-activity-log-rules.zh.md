@@ -335,7 +335,7 @@ Created -> Configured -> Waiting for approval -> Approved -> Published
 Activity Log：
 
 ```text
-Rebecca changed the workspace name from "Data Ops" to "Data Platform".
+小明 changed the workspace name from "Data Ops" to "Data Platform".
 System synced 1,240 records from Salesforce.
 API key "prod-sync" failed to update customer #CUS-1024.
 ```

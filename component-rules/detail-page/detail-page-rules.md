@@ -246,7 +246,7 @@ Rules:
 User detail:
 
 ```text
-Header: Rebecca Chen + Active + Edit + More
+Header: 小明 + Active + Edit + More
 Summary: role, team, last login
 Sections: Overview / Permissions / Activity / Audit Log
 Related: sessions, API keys
