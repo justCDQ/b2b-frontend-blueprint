@@ -23,16 +23,22 @@
 
 ## 推荐仓库结构
 
-未来代码阶段推荐使用 monorepo。
+未来代码阶段推荐使用轻量 monorepo，但核心不绑定 React、Vue、Svelte 等框架。
 
 ```text
 .
 ├── apps/
-│   └── demo/
+│   └── demo-vanilla/
 ├── packages/
-│   ├── ui/
 │   ├── headless/
 │   ├── theme/
+│   ├── dom/
+│   ├── recipes/
+│   ├── adapters/
+│   │   ├── react/
+│   │   ├── vue/
+│   │   └── svelte/
+│   ├── ui/
 │   ├── icons/
 │   ├── rbac/
 │   ├── i18n/
@@ -51,10 +57,13 @@
 
 说明：
 
-- `apps/demo` 是可运行的参考控制台。
-- `packages/ui` 是可复用 UI 组件。
+- `apps/demo-vanilla` 是第一版零依赖参考控制台。
 - `packages/headless` 是不绑定样式的交互逻辑。
 - `packages/theme` 管理 tokens、主题和密度。
+- `packages/dom` 提供原生 DOM 行为控制器。
+- `packages/recipes` 描述组件结构、slots、states 和 class 契约。
+- `packages/adapters` 后续放 React、Vue、Svelte 等框架适配器。
+- `packages/ui` 后续可以提供更完整的框架无关 UI 资产或 adapter 共享层。
 - `packages/rbac` 提供权限模型和权限工具。
 - `packages/data` 提供请求、mock、数据契约示例。
 - `packages/console-shell` 提供控制台壳、布局、导航。
@@ -66,8 +75,10 @@
 推荐心智模型：
 
 ```text
-headless behavior
-→ styled primitive
+theme tokens
+→ headless behavior
+→ DOM controller / adapter
+→ component recipe
 → semantic component
 → domain component
 → feature module
@@ -78,8 +89,10 @@ headless behavior
 
 | 层级 | 职责 | 示例 |
 |---|---|---|
-| headless behavior | 状态、键盘、选择、校验、请求协调等行为逻辑 | `useDisclosure`、`useTableSelection`、`useFilterState` |
-| styled primitive | 使用 tokens 的基础 UI | `Button`、`Input`、`Dialog`、`Tooltip` |
+| theme tokens | 框架无关样式变量 | color、spacing、radius、density |
+| headless behavior | 状态、键盘、选择、校验、请求协调等行为逻辑 | `createDisclosure`、`createSelectionController` |
+| DOM controller / adapter | 将 headless 行为接入 DOM 或框架 | `attachDisclosure`、React adapter |
+| component recipe | 组件结构、slots、states 和 class 契约 | `pageShell`、`stateView` |
 | semantic component | 2B 语义组件 | `DataTable`、`FilterBar`、`ConfirmDialog`、`StateView` |
 | domain component | 业务域映射 | `UserStatusBadge`、`ProjectMembersTable` |
 | feature module | 页面级功能模块 | `users`、`imports`、`projects` |
@@ -87,51 +100,56 @@ headless behavior
 
 规则：
 
+- 核心层不依赖 React、Vue、Svelte。
 - 低层组件不包含业务域逻辑。
 - 业务权限不写死在 primitive 中。
 - API 请求不放进 UI primitive。
 - 主题不放进 headless hooks。
 - 页面负责数据流和业务编排。
-- 可复用组件通过 props、slots、render callbacks 暴露扩展点。
+- 可复用组件通过 slots、recipes、data attributes、adapter props 暴露扩展点。
 
-## apps/demo
+## 框架无关优先
 
-`apps/demo` 是第一个可运行产品面。
+核心包默认框架无关。
+
+规则：
+
+- `theme` 只输出 CSS variables 和 token metadata。
+- `headless` 只输出纯 JavaScript/TypeScript 行为逻辑。
+- `dom` 只处理原生 DOM 绑定，不包含业务页面。
+- `recipes` 只描述组件结构和状态契约。
+- `react`、`vue`、`svelte` 都是 adapter，不是核心。
+- demo 第一版使用 `apps/demo-vanilla` 验证核心能力。
+- 只有当核心契约稳定后，才开始写框架 adapter。
+
+## apps/demo-vanilla
+
+`apps/demo-vanilla` 是第一个可运行产品面。
 
 职责：
 
 - 展示模板的真实使用方式。
-- 组合 `packages/*` 中的能力。
+- 组合框架无关 `packages/*` 能力。
 - 实现页面 demo blueprints。
 - 提供 mock API 和权限切换。
 - 提供 light/dark theme 切换。
 - 提供 i18n 示例。
-- 提供 E2E 测试入口。
+- 不依赖 React/Vue/Svelte。
 
 推荐结构：
 
 ```text
-apps/demo/
+apps/demo-vanilla/
 ├── src/
-│   ├── app/
-│   │   ├── App.tsx
-│   │   ├── routes.tsx
-│   │   └── providers.tsx
-│   ├── modules/
-│   │   ├── users/
-│   │   ├── imports/
-│   │   └── projects/
-│   ├── mocks/
-│   ├── fixtures/
-│   └── main.tsx
-├── tests/
-└── package.json
+│   ├── main.js
+│   └── styles.css
+└── index.html
 ```
 
 规则：
 
-- demo app 可以包含业务示例，但不要把可复用组件写死在 demo 中。
-- demo module 可以依赖 `packages/ui`、`packages/rbac`、`packages/data`。
+- demo app 可以包含业务示例，但不要把可复用能力写死在 demo 中。
+- demo module 可以依赖 `packages/theme`、`packages/headless`、`packages/dom`、`packages/recipes`、`packages/data`。
 - demo app 中的 mock 数据应覆盖权限、状态、错误、empty、pending。
 - demo app 不应该成为唯一实现来源，可复用能力应沉淀回 packages。
 
@@ -652,4 +670,3 @@ MVP 应该证明：
 - MVP 实现顺序可执行。
 - 规则文件和代码模板之间有明确对应关系。
 - 后续 CLI 可以按模块安装，而不是复制整个项目。
-

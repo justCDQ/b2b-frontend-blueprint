@@ -9,13 +9,13 @@ The goal is not to complete the full template at once. The goal is to build a ru
 The first code MVP focuses on:
 
 ```text
-runnable demo app
-+ User Management page
-+ minimal component system
-+ mock data
-+ role switching
+runnable demo-vanilla
++ framework-agnostic core packages
 + light/dark theme
-+ basic state coverage
++ headless behavior
++ DOM controllers
++ component recipes
++ foundation for the next User Management step
 ```
 
 The MVP should prove:
@@ -48,20 +48,20 @@ Use a lightweight and standard stack.
 
 | Capability | Recommendation |
 |---|---|
-| Framework | React + TypeScript |
-| Build | Vite |
-| Package manager | pnpm workspace |
-| Styling | CSS variables + CSS modules or vanilla CSS |
-| Icons | lucide-react |
-| Routing | react-router |
-| Forms | react-hook-form or generic form controller approach |
+| Framework | None; first version uses vanilla HTML/CSS/JavaScript |
+| Build | No build step; Node static server |
+| Package manager | pnpm as script runner only, no dependency install required |
+| Styling | CSS variables + vanilla CSS |
+| Icons | No icon library in the first version; adapters may add one later |
+| Routing | hash or lightweight history controller; complex routing is deferred |
+| Forms | Generic form controller approach; adapters can connect react-hook-form later |
 | Mock API | local fixtures + async mock functions |
-| Tests | Vitest + Playwright later |
+| Tests | Node syntax check; Playwright later |
 
 Notes:
 
+- The first version does not depend on React, Vue, or Svelte.
 - The first version does not need a large UI library.
-- If a headless library is used, treat it as behavior reference rather than copying its visual style.
 - Styling should use tokens and CSS variables so theming remains possible.
 
 ## MVP Repository Structure
@@ -70,21 +70,20 @@ Initialize these directories first:
 
 ```text
 apps/
-└── demo/
+└── demo-vanilla/
     ├── src/
-    │   ├── app/
-    │   ├── modules/
-    │   │   └── users/
-    │   ├── mocks/
-    │   └── main.tsx
-    └── package.json
+    │   ├── main.js
+    │   └── styles.css
+    └── index.html
 
 packages/
-├── ui/
-│   └── src/
 ├── headless/
 │   └── src/
 ├── theme/
+│   └── src/
+├── dom/
+│   └── src/
+├── recipes/
 │   └── src/
 └── data/
     └── src/
@@ -98,11 +97,12 @@ packages/rbac
 packages/i18n
 packages/rules
 packages/console-shell
+packages/ui
 ```
 
 Reason:
 
-- MVP can implement lightweight permission and shell behavior inside `apps/demo`.
+- MVP can implement lightweight permission and shell behavior inside `apps/demo-vanilla`.
 - Stable capabilities can be extracted into independent packages after User Management works.
 
 ## First Packages
@@ -137,33 +137,35 @@ Do not implement:
 - complete state machine library.
 - headless controllers for every component.
 
-### packages/ui
+### packages/dom
 
 Implement first:
 
-- `Button`
-- `IconButton`
-- `Tooltip`
-- `DropdownMenu`
-- `Dialog`
-- `ConfirmDialog`
-- `StateView`
-- `StatusBadge`
-- `PageShell`
-- `PageHeader`
-- `FilterBar`
-- `DataTable`
-- `Pagination`
-- `BatchActionBar`
+- disclosure DOM binding.
+- theme toggle DOM binding.
+- later extension points for dialog, dropdown, tabs, and other DOM controllers.
 
 Do not implement:
 
-- CardList.
-- Drawer.
-- Wizard.
-- Upload.
-- Timeline.
-- full form library.
+- framework components.
+- business page logic.
+- full accessibility component library.
+
+### packages/recipes
+
+Implement first:
+
+- PageShell recipe.
+- PageHeader recipe.
+- StateView recipe.
+- StatusBadge recipe.
+- later FilterBar, DataTable, Dialog, and ConfirmDialog recipes.
+
+Do not implement:
+
+- concrete framework implementation.
+- full styled component library.
+- complex business components.
 
 ### packages/data
 
@@ -349,11 +351,11 @@ Confirm:
 
 Complete:
 
-- create pnpm workspace.
-- create `apps/demo`.
-- create `packages/ui`, `packages/theme`, `packages/headless`, `packages/data`.
-- configure TypeScript.
-- configure Vite.
+- create zero-dependency root scripts.
+- create `apps/demo-vanilla`.
+- create `packages/theme`, `packages/headless`, `packages/dom`, `packages/recipes`, `packages/data`.
+- create Node static server.
+- create syntax check script.
 - configure base scripts:
   - `dev`
   - `build`
@@ -419,7 +421,7 @@ Complete:
 MVP is complete when:
 
 - Project can install dependencies and start.
-- Demo app opens.
+- demo-vanilla opens.
 - User Management page works.
 - Table supports filtering, pagination, and selection.
 - Create/edit dialog opens.
@@ -454,4 +456,3 @@ After MVP, prioritize:
 | Permissions are hardcoded in buttons | Keep permission decisions in feature/domain layer. |
 | States are missed | Verify against the required state coverage list. |
 | Responsive behavior becomes too large | MVP guarantees basic usability only. |
-

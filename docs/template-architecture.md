@@ -23,16 +23,22 @@ Core goals:
 
 ## Recommended Repository Structure
 
-Use a monorepo when code implementation starts.
+Use a lightweight monorepo when code implementation starts, but keep the core independent from React, Vue, and Svelte.
 
 ```text
 .
 ├── apps/
-│   └── demo/
+│   └── demo-vanilla/
 ├── packages/
-│   ├── ui/
 │   ├── headless/
 │   ├── theme/
+│   ├── dom/
+│   ├── recipes/
+│   ├── adapters/
+│   │   ├── react/
+│   │   ├── vue/
+│   │   └── svelte/
+│   ├── ui/
 │   ├── icons/
 │   ├── rbac/
 │   ├── i18n/
@@ -51,10 +57,13 @@ Use a monorepo when code implementation starts.
 
 Notes:
 
-- `apps/demo` is the runnable reference console.
-- `packages/ui` contains reusable UI components.
+- `apps/demo-vanilla` is the first zero-dependency reference console.
 - `packages/headless` contains style-agnostic interaction logic.
 - `packages/theme` manages tokens, themes, and density.
+- `packages/dom` provides native DOM controllers.
+- `packages/recipes` describes component anatomy, slots, states, and class contracts.
+- `packages/adapters` later contains React, Vue, and Svelte adapters.
+- `packages/ui` can later provide shared framework-agnostic UI assets or adapter support.
 - `packages/rbac` provides permission models and helpers.
 - `packages/data` provides request, mock, and contract examples.
 - `packages/console-shell` provides shell layout and navigation.
@@ -66,8 +75,10 @@ Notes:
 Recommended mental model:
 
 ```text
-headless behavior
-→ styled primitive
+theme tokens
+→ headless behavior
+→ DOM controller / adapter
+→ component recipe
 → semantic component
 → domain component
 → feature module
@@ -78,8 +89,10 @@ Layer responsibilities:
 
 | Layer | Responsibility | Examples |
 |---|---|---|
-| headless behavior | State, keyboard behavior, selection, validation, request coordination | `useDisclosure`, `useTableSelection`, `useFilterState` |
-| styled primitive | Token-driven base UI | `Button`, `Input`, `Dialog`, `Tooltip` |
+| theme tokens | Framework-independent style variables | color, spacing, radius, density |
+| headless behavior | State, keyboard behavior, selection, validation, request coordination | `createDisclosure`, `createSelectionController` |
+| DOM controller / adapter | Connects headless behavior to DOM or frameworks | `attachDisclosure`, React adapter |
+| component recipe | Anatomy, slots, states, and class contracts | `pageShell`, `stateView` |
 | semantic component | B2B semantic UI | `DataTable`, `FilterBar`, `ConfirmDialog`, `StateView` |
 | domain component | Domain data mapping | `UserStatusBadge`, `ProjectMembersTable` |
 | feature module | Page-level business module | `users`, `imports`, `projects` |
@@ -87,51 +100,56 @@ Layer responsibilities:
 
 Rules:
 
+- Core packages do not depend on React, Vue, or Svelte.
 - Low-level components do not contain domain logic.
 - Business permissions are not hardcoded in primitives.
 - API requests do not live in UI primitives.
 - Theme does not live in headless hooks.
 - Pages own data flow and business orchestration.
-- Reusable components expose extension through props, slots, and render callbacks.
+- Reusable components expose extension through slots, recipes, data attributes, and adapter props.
 
-## apps/demo
+## Framework-Agnostic First
 
-`apps/demo` is the first runnable product surface.
+Core packages are framework-agnostic by default.
+
+Rules:
+
+- `theme` exports CSS variables and token metadata.
+- `headless` exports pure JavaScript/TypeScript behavior logic.
+- `dom` binds behavior to native DOM without business page logic.
+- `recipes` describes anatomy and state contracts.
+- `react`, `vue`, and `svelte` are adapters, not the core.
+- The first demo uses `apps/demo-vanilla` to validate core behavior.
+- Framework adapters should start only after the core contracts are stable.
+
+## apps/demo-vanilla
+
+`apps/demo-vanilla` is the first runnable product surface.
 
 Responsibilities:
 
 - Demonstrate real template usage.
-- Compose capabilities from `packages/*`.
+- Compose framework-agnostic capabilities from `packages/*`.
 - Implement page demo blueprints.
 - Provide mock APIs and permission switching.
 - Provide light/dark theme switching.
 - Provide i18n examples.
-- Provide E2E test entry points.
+- Avoid React/Vue/Svelte dependencies.
 
 Recommended structure:
 
 ```text
-apps/demo/
+apps/demo-vanilla/
 ├── src/
-│   ├── app/
-│   │   ├── App.tsx
-│   │   ├── routes.tsx
-│   │   └── providers.tsx
-│   ├── modules/
-│   │   ├── users/
-│   │   ├── imports/
-│   │   └── projects/
-│   ├── mocks/
-│   ├── fixtures/
-│   └── main.tsx
-├── tests/
-└── package.json
+│   ├── main.js
+│   └── styles.css
+└── index.html
 ```
 
 Rules:
 
 - Demo app may contain business examples, but reusable components should not stay trapped inside demo modules.
-- Demo modules may depend on `packages/ui`, `packages/rbac`, and `packages/data`.
+- Demo modules may depend on `packages/theme`, `packages/headless`, `packages/dom`, `packages/recipes`, and `packages/data`.
 - Mock data should cover permission, state, error, empty, and pending cases.
 - Demo app should not become the only source of reusable implementation.
 
@@ -652,4 +670,3 @@ The template architecture is ready for code initialization when:
 - MVP implementation order is executable.
 - Rules and code templates have a clear relationship.
 - Future CLI can install modules instead of copying the whole project.
-

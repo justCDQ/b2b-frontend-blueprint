@@ -34,6 +34,8 @@ Those belong to later phases.
 
 ```text
 .
+├── apps/
+│   └── demo-vanilla/
 ├── component-rules/
 │   ├── README.md
 │   ├── _ai-bundles/
@@ -48,6 +50,13 @@ Those belong to later phases.
 │   └── rule-authoring-guide.md
 ├── examples/
 │   └── prompts/
+├── packages/
+│   ├── data/
+│   ├── dom/
+│   ├── headless/
+│   ├── recipes/
+│   └── theme/
+├── scripts/
 ├── system-rules/
 │   └── component-architecture/
 ├── ROADMAP.md
@@ -185,6 +194,21 @@ For page demo blueprints:
 - [Project Settings Detail](./examples/pages/settings-detail.md)
 - [项目设置详情](./examples/pages/settings-detail.zh.md)
 
+For the framework-agnostic demo skeleton:
+
+```bash
+pnpm dev
+```
+
+The first runnable app is zero-dependency vanilla HTML/CSS/JavaScript:
+
+- `apps/demo-vanilla`
+- `packages/theme`
+- `packages/headless`
+- `packages/dom`
+- `packages/recipes`
+- `packages/data`
+
 ## MVP Status
 
 Current MVP includes:
@@ -195,6 +219,7 @@ Current MVP includes:
 - AI bundle entry points.
 - Initial component architecture system rule.
 - First page demo blueprint.
+- Framework-agnostic runnable skeleton.
 
 See [ROADMAP.md](./ROADMAP.md) for planned phases.
 

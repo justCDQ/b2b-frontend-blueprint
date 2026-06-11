@@ -9,13 +9,13 @@
 第一版代码 MVP 聚焦：
 
 ```text
-可运行 demo app
-+ User Management 页面
-+ 最小组件系统
-+ mock 数据
-+ 权限切换
+可运行 demo-vanilla
++ 框架无关核心包
 + light/dark theme
-+ 基础状态覆盖
++ headless 行为
++ DOM controller
++ component recipes
++ User Management 的下一阶段实现基础
 ```
 
 MVP 需要证明：
@@ -48,20 +48,20 @@ MVP 需要证明：
 
 | 能力 | 建议 |
 |---|---|
-| Framework | React + TypeScript |
-| Build | Vite |
-| Package manager | pnpm workspace |
-| Styling | CSS variables + CSS modules 或 vanilla CSS |
-| Icons | lucide-react |
-| Routing | react-router |
-| Forms | react-hook-form 或通用 form controller 思路 |
+| Framework | 无框架，第一版使用 Vanilla HTML/CSS/JavaScript |
+| Build | 无构建，Node 静态服务器 |
+| Package manager | pnpm 只作为脚本入口，不要求安装依赖 |
+| Styling | CSS variables + vanilla CSS |
+| Icons | 第一版不用图标库，后续 adapter 可选 |
+| Routing | hash 或轻量 history controller，第一版先不做复杂路由 |
+| Forms | 通用 form controller 思路，后续 adapter 可接 react-hook-form |
 | Mock API | 本地 fixtures + async mock functions |
-| Tests | Vitest + Playwright 后续补 |
+| Tests | Node syntax check，Playwright 后续补 |
 
 说明：
 
-- 第一版不必强依赖大型 UI 库。
-- 如果使用 headless library，只作为 primitive 行为参考，不让 demo 变成某个库的样式复制。
+- 第一版不依赖 React、Vue、Svelte。
+- 第一版不依赖大型 UI 库。
 - 样式优先用 tokens 和 CSS variables，方便后续换肤。
 
 ## MVP 仓库结构
@@ -70,21 +70,20 @@ MVP 需要证明：
 
 ```text
 apps/
-└── demo/
+└── demo-vanilla/
     ├── src/
-    │   ├── app/
-    │   ├── modules/
-    │   │   └── users/
-    │   ├── mocks/
-    │   └── main.tsx
-    └── package.json
+    │   ├── main.js
+    │   └── styles.css
+    └── index.html
 
 packages/
-├── ui/
-│   └── src/
 ├── headless/
 │   └── src/
 ├── theme/
+│   └── src/
+├── dom/
+│   └── src/
+├── recipes/
 │   └── src/
 └── data/
     └── src/
@@ -98,11 +97,12 @@ packages/rbac
 packages/i18n
 packages/rules
 packages/console-shell
+packages/ui
 ```
 
 原因：
 
-- MVP 可以先在 `apps/demo` 内实现轻量 permission 和 shell。
+- MVP 可以先在 `apps/demo-vanilla` 内实现轻量 permission 和 shell。
 - 等 User Management 跑通后，再把稳定能力抽到独立 package。
 
 ## 第一批 packages 职责
@@ -137,33 +137,35 @@ packages/console-shell
 - 完整状态机库。
 - 所有组件的 headless controller。
 
-### packages/ui
+### packages/dom
 
 先实现：
 
-- `Button`
-- `IconButton`
-- `Tooltip`
-- `DropdownMenu`
-- `Dialog`
-- `ConfirmDialog`
-- `StateView`
-- `StatusBadge`
-- `PageShell`
-- `PageHeader`
-- `FilterBar`
-- `DataTable`
-- `Pagination`
-- `BatchActionBar`
+- disclosure DOM 绑定。
+- theme toggle DOM 绑定。
+- 后续可扩展 dialog、dropdown、tabs 等 DOM controller。
 
 不做：
 
-- CardList。
-- Drawer。
-- Wizard。
-- Upload。
-- Timeline。
-- 完整 Form library。
+- 框架组件。
+- 业务页面逻辑。
+- 完整可访问性组件库。
+
+### packages/recipes
+
+先实现：
+
+- PageShell recipe。
+- PageHeader recipe。
+- StateView recipe。
+- StatusBadge recipe。
+- 后续补 FilterBar、DataTable、Dialog、ConfirmDialog recipe。
+
+不做：
+
+- 具体框架实现。
+- 完整样式组件库。
+- 复杂业务组件。
 
 ### packages/data
 
@@ -349,11 +351,11 @@ MVP 响应式只覆盖基础可用性。
 
 完成：
 
-- 创建 pnpm workspace。
-- 创建 `apps/demo`。
-- 创建 `packages/ui`、`packages/theme`、`packages/headless`、`packages/data`。
-- 配置 TypeScript。
-- 配置 Vite。
+- 创建零依赖 root scripts。
+- 创建 `apps/demo-vanilla`。
+- 创建 `packages/theme`、`packages/headless`、`packages/dom`、`packages/recipes`、`packages/data`。
+- 创建 Node 静态服务器。
+- 创建 syntax check 脚本。
 - 配置基础 scripts：
   - `dev`
   - `build`
@@ -419,7 +421,7 @@ MVP 响应式只覆盖基础可用性。
 MVP 完成需要满足：
 
 - 项目可以安装依赖并启动。
-- demo app 可以打开。
+- demo-vanilla 可以打开。
 - User Management 页面可用。
 - 表格可以筛选、分页、选择。
 - 可以打开 create/edit dialog。
@@ -454,4 +456,3 @@ MVP 完成后，优先顺序：
 | 权限写死在按钮里 | 权限判断放在 feature/domain 层。 |
 | 状态遗漏 | 按状态覆盖要求逐项验收。 |
 | 响应式失控 | MVP 只保证基础可用，不追求复杂移动端体验。 |
-

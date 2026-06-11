@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-density="comfortable">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B2B Frontend Blueprint</title>
+    <link rel="stylesheet" href="../../packages/theme/src/styles.css" />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">B2B Blueprint</div>
+        <nav class="nav" aria-label="Demo navigation">
+          <a class="nav__item nav__item--active" href="#users">User Management</a>
+          <a class="nav__item" href="#imports">Import Records</a>
+          <a class="nav__item" href="#projects">Project Settings</a>
+        </nav>
+      </aside>
+
+      <div class="main">
+        <header class="page-header">
+          <div>
+            <h1>B2B Frontend Blueprint</h1>
+            <p>Framework-agnostic demo skeleton for a rules-driven enterprise console.</p>
+          </div>
+          <div class="actions">
+            <button class="button button--secondary" id="scope-toggle" type="button" aria-expanded="false">
+              Preview scope
+            </button>
+            <button class="button button--primary" id="theme-toggle" type="button">
+              Switch to dark
+            </button>
+          </div>
+        </header>
+
+        <main class="content">
+          <section class="hero-section" aria-labelledby="mvp-status-title">
+            <div>
+              <p class="eyebrow">MVP skeleton</p>
+              <h2 id="mvp-status-title">Framework-independent foundation is ready.</h2>
+              <p>
+                The first code layer is plain HTML, CSS, and JavaScript modules.
+                React, Vue, or Svelte can be added later as adapters.
+              </p>
+            </div>
+            <span class="status status--success">Ready</span>
+          </section>
+
+          <section class="metric-grid" id="summary" aria-label="MVP summary"></section>
+
+          <section class="state-view" id="scope-panel" hidden>
+            <div class="state-view__mark" aria-hidden="true"></div>
+            <div>
+              <h2>MVP scope</h2>
+              <p id="scope-list"></p>
+              <button class="button button--secondary" id="scope-close" type="button">Close preview</button>
+            </div>
+          </section>
+
+          <section class="state-view" id="empty-panel">
+            <div class="state-view__mark" aria-hidden="true"></div>
+            <div>
+              <h2>No page module selected</h2>
+              <p>User Management will be the first runnable module built on top of this shell.</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
