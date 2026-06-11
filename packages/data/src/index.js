@@ -1,3 +1,18 @@
+export {
+  createUserRecord,
+  deleteUserRecord,
+  getDisabledReasons,
+  getSignedInUserId,
+  getUserPermissions,
+  getUserRoleOptions,
+  getUserStatusOptions,
+  queryUsers,
+  resetUserPassword,
+  updateUserRecord,
+  userRoles,
+  userStatuses
+} from "./users.js";
+
 export function getDemoSummary() {
   return [
     { label: "Core packages", value: "5" },
