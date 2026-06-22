@@ -36,6 +36,7 @@
               </select>
             </label>
             <button class="button button--secondary" id="refresh-button" type="button">Refresh</button>
+            <button class="button button--secondary" id="create-user-button" type="button">Create User</button>
             <button class="button button--primary" id="theme-toggle" type="button">Switch to dark</button>
           </div>
         </header>
@@ -65,8 +66,9 @@
 
           <section class="batch-bar" id="batch-bar" hidden>
             <span id="selection-summary">0 selected</span>
-            <button class="button button--secondary" type="button" disabled>Export</button>
-            <button class="button button--secondary" type="button" disabled>Disable</button>
+            <button class="button button--secondary" id="batch-export" type="button">Export</button>
+            <button class="button button--secondary" id="batch-disable" type="button">Disable</button>
+            <button class="button button--danger" id="batch-delete" type="button">Delete</button>
             <button class="button button--secondary" type="button" id="clear-selection">Clear selection</button>
           </section>
 
@@ -97,6 +99,83 @@
         </main>
       </div>
     </div>
+
+    <dialog class="dialog" id="user-dialog">
+      <form class="dialog__panel" id="user-form" method="dialog">
+        <header class="dialog__header">
+          <div>
+            <p class="eyebrow">User form</p>
+            <h2 id="user-dialog-title">Create user</h2>
+          </div>
+          <button class="icon-action" id="user-dialog-close" type="button" aria-label="Close dialog">Close</button>
+        </header>
+
+        <div class="dialog__body">
+          <p class="form-error" id="user-form-error" hidden></p>
+          <input id="user-id-field" name="id" type="hidden" />
+          <label class="field">
+            <span>Name</span>
+            <input id="user-name-field" name="name" required maxlength="80" placeholder="小明" />
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input id="user-email-field" name="email" required type="email" placeholder="xiaoming@example.com" />
+          </label>
+          <label class="field">
+            <span>Role</span>
+            <select id="user-role-field" name="role" required></select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="user-status-field" name="status" required></select>
+          </label>
+        </div>
+
+        <footer class="dialog__footer">
+          <button class="button button--secondary" id="user-form-cancel" type="button">Cancel</button>
+          <button class="button button--primary" id="user-form-submit" type="submit">Save</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="dialog dialog--detail" id="detail-dialog">
+      <section class="dialog__panel">
+        <header class="dialog__header">
+          <div>
+            <p class="eyebrow">User detail</p>
+            <h2 id="detail-title">User detail</h2>
+          </div>
+          <button class="icon-action" id="detail-close" type="button" aria-label="Close dialog">Close</button>
+        </header>
+
+        <div class="dialog__body">
+          <dl class="detail-grid" id="detail-content"></dl>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog class="dialog dialog--confirm" id="confirm-dialog">
+      <form class="dialog__panel" id="confirm-form" method="dialog">
+        <header class="dialog__header">
+          <div>
+            <p class="eyebrow" id="confirm-eyebrow">Confirm action</p>
+            <h2 id="confirm-title">Confirm action</h2>
+          </div>
+          <button class="icon-action" id="confirm-close" type="button" aria-label="Close dialog">Close</button>
+        </header>
+
+        <div class="dialog__body">
+          <p class="confirm-description" id="confirm-description"></p>
+          <p class="confirm-subject" id="confirm-subject"></p>
+          <p class="form-error" id="confirm-error" hidden></p>
+        </div>
+
+        <footer class="dialog__footer">
+          <button class="button button--secondary" id="confirm-cancel" type="button">Cancel</button>
+          <button class="button button--primary" id="confirm-submit" type="submit">Confirm</button>
+        </footer>
+      </form>
+    </dialog>
 
     <script type="module" src="./src/main.js"></script>
   </body>
