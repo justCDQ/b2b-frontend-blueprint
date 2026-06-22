@@ -14,6 +14,7 @@ It provides:
 - AI-executable compact rules.
 - Scenario-based AI rule bundles.
 - Initial system architecture rules for reusable 2B console components.
+- A framework-agnostic vanilla demo for validating interaction rules.
 
 It is designed to help teams and coding agents generate more consistent 2B frontend code.
 
@@ -26,9 +27,24 @@ This MVP does not include:
 - RBAC implementation.
 - Auth implementation.
 - E2E test project.
-- A runnable demo app.
 
 Those belong to later phases.
+
+## Run The Demo
+
+Use the local dev server:
+
+```bash
+pnpm dev
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4173/apps/demo-vanilla/
+```
+
+Do not open `apps/demo-vanilla/index.html` directly with `file://`. The demo uses ES modules and cross-package imports, so browser module loading works through the local server URL.
 
 ## Directory Structure
 

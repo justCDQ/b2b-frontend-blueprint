@@ -23,6 +23,22 @@ For a quick overview:
 3. Read [component-rules/_inventory/rules-inventory.md](../component-rules/_inventory/rules-inventory.md).
 4. Read the module that matches your current task.
 
+## Run The Demo
+
+Start the local server from the repository root:
+
+```bash
+pnpm dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173/apps/demo-vanilla/
+```
+
+Do not open `apps/demo-vanilla/index.html` directly through `file://`. The demo imports modules from sibling packages, and those module imports are expected to run through the local server.
+
 For Chinese product/design discussion:
 
 1. Prefer `*-rules.zh.md`.
@@ -165,4 +181,3 @@ It does not yet include:
 - Demo application source code.
 
 Those belong to later phases in [ROADMAP.md](../ROADMAP.md).
-

@@ -23,6 +23,22 @@
 3. 阅读 [component-rules/_inventory/rules-inventory.zh.md](../component-rules/_inventory/rules-inventory.zh.md)。
 4. 根据当前任务阅读对应组件模块。
 
+## 运行 Demo
+
+在仓库根目录启动本地服务：
+
+```bash
+pnpm dev
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:4173/apps/demo-vanilla/
+```
+
+不要直接用 `file://` 打开 `apps/demo-vanilla/index.html`。当前 demo 使用 ES modules，并从同仓库其他 package 中导入模块，需要通过本地服务 URL 才能正常执行脚本。
+
 中文讨论产品和交互时：
 
 1. 优先阅读 `*-rules.zh.md`。
@@ -165,4 +181,3 @@ AI 代码生成时：
 - Demo 应用源码。
 
 这些内容会进入 [ROADMAP.md](../ROADMAP.md) 后续阶段。
-

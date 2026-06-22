@@ -66,7 +66,8 @@ const confirmClose = document.querySelector("#confirm-close");
 const confirmCancel = document.querySelector("#confirm-cancel");
 const confirmSubmit = document.querySelector("#confirm-submit");
 const confirmError = document.querySelector("#confirm-error");
-const startImport = document.querySelector("#start-import");
+const importStepper = document.querySelector("#import-stepper");
+const importWorkflowContent = document.querySelector("#import-workflow-content");
 const importTasksBody = document.querySelector("#import-tasks-body");
 const projectName = document.querySelector("#project-name");
 const projectSummary = document.querySelector("#project-summary");
@@ -86,6 +87,8 @@ let formMode = "create";
 let confirmState = null;
 let currentPage = "users";
 let projectEditMode = false;
+let importStep = "upload";
+let importProgress = "idle";
 const pendingStatusUserIds = new Set();
 const projectSaveAction = createPendingAction();
 
@@ -166,6 +169,19 @@ const importTasks = [
     owner: "小明",
     createdAt: "2026-06-19T15:40:00.000Z"
   }
+];
+
+const importSteps = [
+  { key: "upload", label: "Upload" },
+  { key: "mapping", label: "Map fields" },
+  { key: "validation", label: "Validate" },
+  { key: "result", label: "Import" }
+];
+
+const importValidationRows = [
+  { row: 12, field: "email", issue: "Email is missing a domain." },
+  { row: 27, field: "owner", issue: "Owner does not exist." },
+  { row: 88, field: "status", issue: "Status must be active or disabled." }
 ];
 
 attachThemeToggle({
@@ -297,7 +313,7 @@ function bindEvents() {
 
   document.addEventListener("click", closeOpenMenus);
 
-  startImport.addEventListener("click", startDemoImportTask);
+  importWorkflowContent.addEventListener("click", handleImportWorkflowAction);
 
   projectEditToggle.addEventListener("click", () => setProjectEditMode(true));
   projectCancelEdit.addEventListener("click", () => {
@@ -333,6 +349,7 @@ function renderCurrentPage() {
   refreshButton.hidden = !isUsersPage;
 
   if (currentPage === "imports") {
+    renderImportWorkflow();
     renderImportTasks();
   }
 
@@ -1059,34 +1076,201 @@ function renderImportTasks() {
     .join("");
 }
 
-async function startDemoImportTask() {
-  startImport.disabled = true;
-  startImport.textContent = "Uploading...";
+function renderImportWorkflow() {
+  const activeIndex = importSteps.findIndex((step) => step.key === importStep);
 
-  await delay(260);
+  importStepper.innerHTML = importSteps
+    .map((step, index) => `
+      <span class="stepper__item ${index === activeIndex ? "stepper__item--active" : ""} ${index < activeIndex ? "stepper__item--done" : ""}">
+        ${escapeHtml(step.label)}
+      </span>
+    `)
+    .join("");
 
-  importTasks.unshift({
-    fileName: "new-customers-demo.csv",
-    status: "validating",
-    total: 0,
-    failed: 0,
-    owner: "小明",
-    createdAt: new Date().toISOString()
-  });
-  renderImportTasks();
-  startImport.textContent = "Validating...";
+  const content = {
+    upload: renderImportUploadStep,
+    mapping: renderImportMappingStep,
+    validation: renderImportValidationStep,
+    result: renderImportResultStep
+  }[importStep];
 
-  await delay(420);
+  importWorkflowContent.innerHTML = content();
+}
 
-  importTasks[0] = {
-    ...importTasks[0],
-    status: "partial",
-    total: 356,
-    failed: 7
-  };
-  renderImportTasks();
-  startImport.disabled = false;
-  startImport.textContent = "Start demo import";
+function renderImportUploadStep() {
+  return `
+    <div class="upload-zone">
+      <strong>Upload customer records</strong>
+      <span>CSV or XLSX, up to 10 MB. The demo keeps upload logic local and shows the expected workflow states.</span>
+      <button class="button button--primary" data-import-action="upload" type="button" ${importProgress === "uploading" ? "disabled" : ""}>
+        ${importProgress === "uploading" ? "Uploading..." : "Use demo file"}
+      </button>
+    </div>
+  `;
+}
+
+function renderImportMappingStep() {
+  return `
+    <div class="workflow-card">
+      <div>
+        <strong>Map incoming fields</strong>
+        <p>Confirm how uploaded columns map to system fields before validation.</p>
+      </div>
+      <div class="mapping-grid">
+        ${renderMappingRow("Full Name", "name")}
+        ${renderMappingRow("Email Address", "email")}
+        ${renderMappingRow("Account Owner", "owner")}
+        ${renderMappingRow("Lifecycle Status", "status")}
+      </div>
+      <div class="form-actions">
+        <button class="button button--secondary" data-import-action="back-upload" type="button">Back</button>
+        <button class="button button--primary" data-import-action="validate" type="button">Validate records</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderImportValidationStep() {
+  return `
+    <div class="workflow-card">
+      <div>
+        <strong>Validation found 3 issues</strong>
+        <p>Errors are isolated before import. Users can download failed rows or continue with valid rows.</p>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table data-table--compact">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>Field</th>
+              <th>Issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${importValidationRows.map((row) => `
+              <tr>
+                <td>${row.row}</td>
+                <td>${escapeHtml(row.field)}</td>
+                <td>${escapeHtml(row.issue)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions">
+        <button class="button button--secondary" data-import-action="download-errors" type="button">Download failed rows</button>
+        <button class="button button--primary" data-import-action="run-import" type="button" ${importProgress === "importing" ? "disabled" : ""}>
+          ${importProgress === "importing" ? "Importing..." : "Import valid rows"}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderImportResultStep() {
+  return `
+    <div class="workflow-card">
+      <div class="result-summary">
+        <div>
+          <strong>349</strong>
+          <span>Imported</span>
+        </div>
+        <div>
+          <strong>7</strong>
+          <span>Failed</span>
+        </div>
+        <div>
+          <strong>356</strong>
+          <span>Total rows</span>
+        </div>
+      </div>
+      <p class="workflow-note">The completed task was added to the recent import task table with a partial status.</p>
+      <div class="form-actions">
+        <button class="button button--secondary" data-import-action="restart" type="button">Start another import</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderMappingRow(source, target) {
+  return `
+    <label class="field">
+      <span>${escapeHtml(source)}</span>
+      <select>
+        <option selected>${escapeHtml(target)}</option>
+      </select>
+    </label>
+  `;
+}
+
+async function handleImportWorkflowAction(event) {
+  const action = event.target.closest("[data-import-action]")?.dataset.importAction;
+
+  if (!action) return;
+
+  if (action === "upload") {
+    importProgress = "uploading";
+    renderImportWorkflow();
+    await delay(260);
+    importProgress = "idle";
+    importStep = "mapping";
+    renderImportWorkflow();
+    return;
+  }
+
+  if (action === "back-upload") {
+    importStep = "upload";
+    renderImportWorkflow();
+    return;
+  }
+
+  if (action === "validate") {
+    importStep = "validation";
+    renderImportWorkflow();
+    return;
+  }
+
+  if (action === "download-errors") {
+    downloadImportErrors();
+    return;
+  }
+
+  if (action === "run-import") {
+    importProgress = "importing";
+    renderImportWorkflow();
+    await delay(420);
+    importProgress = "idle";
+    importStep = "result";
+    importTasks.unshift({
+      fileName: "new-customers-demo.csv",
+      status: "partial",
+      total: 356,
+      failed: 7,
+      owner: "小明",
+      createdAt: new Date().toISOString()
+    });
+    renderImportWorkflow();
+    renderImportTasks();
+    return;
+  }
+
+  if (action === "restart") {
+    importStep = "upload";
+    renderImportWorkflow();
+  }
+}
+
+function downloadImportErrors() {
+  const csv = toCsv(importValidationRows, ["row", "field", "issue"]);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "import-errors-demo.csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function renderProjectSettings() {

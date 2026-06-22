@@ -101,17 +101,8 @@
 
           <div class="page-panel" id="imports-page" data-page-panel="imports" hidden>
             <section class="workflow-shell">
-              <div class="stepper" aria-label="Import steps">
-                <span class="stepper__item stepper__item--active">Upload</span>
-                <span class="stepper__item">Map fields</span>
-                <span class="stepper__item">Validate</span>
-                <span class="stepper__item">Import</span>
-              </div>
-              <div class="upload-zone">
-                <strong>Upload customer records</strong>
-                <span>CSV or XLSX, up to 10 MB. The demo keeps upload logic local and shows the expected workflow states.</span>
-                <button class="button button--primary" id="start-import" type="button">Start demo import</button>
-              </div>
+              <div class="stepper" id="import-stepper" aria-label="Import steps"></div>
+              <div id="import-workflow-content"></div>
             </section>
 
             <section class="table-shell">
