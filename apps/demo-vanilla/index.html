@@ -12,18 +12,18 @@
       <aside class="sidebar">
         <div class="brand">B2B Blueprint</div>
         <nav class="nav" aria-label="Demo navigation">
-          <a class="nav__item nav__item--active" href="#users">User Management</a>
-          <a class="nav__item" href="#imports" aria-disabled="true">Import Records</a>
-          <a class="nav__item" href="#projects" aria-disabled="true">Project Settings</a>
+          <a class="nav__item nav__item--active" href="#users" data-page-link="users">User Management</a>
+          <a class="nav__item" href="#imports" data-page-link="imports">Import Records</a>
+          <a class="nav__item" href="#projects" data-page-link="projects">Project Settings</a>
         </nav>
       </aside>
 
       <div class="main">
         <header class="page-header">
           <div>
-            <p class="eyebrow">Framework-agnostic demo</p>
-            <h1>Users</h1>
-            <p>Manage organization members, roles, and access status.</p>
+            <p class="eyebrow" id="page-eyebrow">Framework-agnostic demo</p>
+            <h1 id="page-title">Users</h1>
+            <p id="page-description">Manage organization members, roles, and access status.</p>
           </div>
           <div class="actions">
             <label class="field field--inline">
@@ -42,60 +42,155 @@
         </header>
 
         <main class="content">
-          <section class="filter-bar" aria-label="User filters">
-            <label class="field">
-              <span>Keyword</span>
-              <input id="keyword-input" type="search" placeholder="Search name or email" />
-            </label>
-            <label class="field">
-              <span>Role</span>
-              <select id="role-filter">
-                <option value="">All roles</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Status</span>
-              <select id="status-filter">
-                <option value="">All statuses</option>
-              </select>
-            </label>
-            <div class="filter-bar__actions">
-              <button class="button button--secondary" id="reset-filters" type="button">Reset</button>
-            </div>
-          </section>
+          <div class="page-panel" id="users-page" data-page-panel="users">
+            <section class="filter-bar" aria-label="User filters">
+              <label class="field">
+                <span>Keyword</span>
+                <input id="keyword-input" type="search" placeholder="Search name or email" />
+              </label>
+              <label class="field">
+                <span>Role</span>
+                <select id="role-filter">
+                  <option value="">All roles</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Status</span>
+                <select id="status-filter">
+                  <option value="">All statuses</option>
+                </select>
+              </label>
+              <div class="filter-bar__actions">
+                <button class="button button--secondary" id="reset-filters" type="button">Reset</button>
+              </div>
+            </section>
 
-          <section class="batch-bar" id="batch-bar" hidden>
-            <span id="selection-summary">0 selected</span>
-            <button class="button button--secondary" id="batch-export" type="button">Export</button>
-            <button class="button button--secondary" id="batch-disable" type="button">Disable</button>
-            <button class="button button--danger" id="batch-delete" type="button">Delete</button>
-            <button class="button button--secondary" type="button" id="clear-selection">Clear selection</button>
-          </section>
+            <section class="batch-bar" id="batch-bar" hidden>
+              <span id="selection-summary">0 selected</span>
+              <button class="button button--secondary" id="batch-export" type="button">Export</button>
+              <button class="button button--secondary" id="batch-disable" type="button">Disable</button>
+              <button class="button button--danger" id="batch-delete" type="button">Delete</button>
+              <button class="button button--secondary" type="button" id="clear-selection">Clear selection</button>
+            </section>
 
-          <section class="table-shell" aria-live="polite">
-            <div class="table-status" id="table-status" hidden></div>
-            <div class="table-scroll">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="selection-cell">
-                      <input id="select-all" type="checkbox" aria-label="Select all users" />
-                    </th>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Team</th>
-                    <th>MFA</th>
-                    <th>Last active</th>
-                    <th>Created</th>
-                    <th class="operation-cell">Operations</th>
-                  </tr>
-                </thead>
-                <tbody id="users-body"></tbody>
-              </table>
-            </div>
-            <div class="pagination" id="pagination"></div>
-          </section>
+            <section class="table-shell" aria-live="polite">
+              <div class="table-status" id="table-status" hidden></div>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th class="selection-cell">
+                        <input id="select-all" type="checkbox" aria-label="Select all users" />
+                      </th>
+                      <th>User</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Team</th>
+                      <th>MFA</th>
+                      <th>Last active</th>
+                      <th>Created</th>
+                      <th class="operation-cell">Operations</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-body"></tbody>
+                </table>
+              </div>
+              <div class="pagination" id="pagination"></div>
+            </section>
+          </div>
+
+          <div class="page-panel" id="imports-page" data-page-panel="imports" hidden>
+            <section class="workflow-shell">
+              <div class="stepper" aria-label="Import steps">
+                <span class="stepper__item stepper__item--active">Upload</span>
+                <span class="stepper__item">Map fields</span>
+                <span class="stepper__item">Validate</span>
+                <span class="stepper__item">Import</span>
+              </div>
+              <div class="upload-zone">
+                <strong>Upload customer records</strong>
+                <span>CSV or XLSX, up to 10 MB. The demo keeps upload logic local and shows the expected workflow states.</span>
+                <button class="button button--primary" id="start-import" type="button">Start demo import</button>
+              </div>
+            </section>
+
+            <section class="table-shell">
+              <div class="section-header">
+                <div>
+                  <h2>Recent import tasks</h2>
+                  <p>Track validation, partial failure, and recovery states.</p>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>File</th>
+                      <th>Status</th>
+                      <th>Total</th>
+                      <th>Failed</th>
+                      <th>Owner</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody id="import-tasks-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div class="page-panel" id="projects-page" data-page-panel="projects" hidden>
+            <section class="detail-shell">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Project detail</p>
+                  <h2 id="project-name">MemoryLake Console</h2>
+                  <p id="project-summary">Production workspace for B2B admin workflows.</p>
+                </div>
+                <button class="button button--secondary" id="project-edit-toggle" type="button">Edit settings</button>
+              </div>
+
+              <div class="tabs" aria-label="Project sections">
+                <button class="tab tab--active" type="button">Overview</button>
+                <button class="tab" type="button">Settings</button>
+                <button class="tab" type="button">Members</button>
+                <button class="tab" type="button">Security</button>
+              </div>
+
+              <form class="settings-grid" id="project-settings-form">
+                <label class="field">
+                  <span>Project name</span>
+                  <input id="project-name-field" name="name" required />
+                </label>
+                <label class="field">
+                  <span>Region</span>
+                  <select id="project-region-field" name="region">
+                    <option value="us-east">US East</option>
+                    <option value="eu-west">EU West</option>
+                    <option value="ap-southeast">AP Southeast</option>
+                  </select>
+                </label>
+                <label class="field field--wide">
+                  <span>Description</span>
+                  <textarea id="project-description-field" name="description" rows="3"></textarea>
+                </label>
+                <div class="form-actions field--wide">
+                  <button class="button button--secondary" id="project-cancel-edit" type="button">Cancel</button>
+                  <button class="button button--primary" id="project-save" type="submit">Save settings</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="table-shell">
+              <div class="section-header">
+                <div>
+                  <h2>Activity log</h2>
+                  <p>Recent changes are shown as an audit trail.</p>
+                </div>
+              </div>
+              <ol class="activity-log" id="project-activity"></ol>
+            </section>
+          </div>
         </main>
       </div>
     </div>

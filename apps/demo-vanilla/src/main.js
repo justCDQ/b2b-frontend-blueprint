@@ -16,10 +16,16 @@ import {
 import { attachThemeToggle } from "../../../packages/dom/src/index.js";
 
 const root = document.documentElement;
+const pageEyebrow = document.querySelector("#page-eyebrow");
+const pageTitle = document.querySelector("#page-title");
+const pageDescription = document.querySelector("#page-description");
+const pageLinks = document.querySelectorAll("[data-page-link]");
+const pagePanels = document.querySelectorAll("[data-page-panel]");
 const themeToggle = document.querySelector("#theme-toggle");
 const refreshButton = document.querySelector("#refresh-button");
 const createUserButton = document.querySelector("#create-user-button");
 const roleSwitch = document.querySelector("#role-switch");
+const roleSwitchField = roleSwitch.closest(".field");
 const keywordInput = document.querySelector("#keyword-input");
 const roleFilter = document.querySelector("#role-filter");
 const statusFilter = document.querySelector("#status-filter");
@@ -60,13 +66,28 @@ const confirmClose = document.querySelector("#confirm-close");
 const confirmCancel = document.querySelector("#confirm-cancel");
 const confirmSubmit = document.querySelector("#confirm-submit");
 const confirmError = document.querySelector("#confirm-error");
+const startImport = document.querySelector("#start-import");
+const importTasksBody = document.querySelector("#import-tasks-body");
+const projectName = document.querySelector("#project-name");
+const projectSummary = document.querySelector("#project-summary");
+const projectEditToggle = document.querySelector("#project-edit-toggle");
+const projectSettingsForm = document.querySelector("#project-settings-form");
+const projectNameField = document.querySelector("#project-name-field");
+const projectRegionField = document.querySelector("#project-region-field");
+const projectDescriptionField = document.querySelector("#project-description-field");
+const projectCancelEdit = document.querySelector("#project-cancel-edit");
+const projectSave = document.querySelector("#project-save");
+const projectActivity = document.querySelector("#project-activity");
 
 let currentRole = "owner";
 let currentRows = [];
 let keywordTimer;
 let formMode = "create";
 let confirmState = null;
+let currentPage = "users";
+let projectEditMode = false;
 const pendingStatusUserIds = new Set();
+const projectSaveAction = createPendingAction();
 
 const query = createListQueryController({
   pageNum: 1,
@@ -81,6 +102,72 @@ const selection = createSelectionController({
 const saveUserAction = createPendingAction();
 const confirmAction = createPendingAction();
 
+const pageMeta = {
+  users: {
+    eyebrow: "Framework-agnostic demo",
+    title: "Users",
+    description: "Manage organization members, roles, and access status."
+  },
+  imports: {
+    eyebrow: "Upload workflow demo",
+    title: "Import Records",
+    description: "Validate uploaded records, review failures, and track async import tasks."
+  },
+  projects: {
+    eyebrow: "Detail page demo",
+    title: "Project Settings",
+    description: "Edit project configuration, review related data, and scan audit history."
+  }
+};
+
+const project = {
+  name: "MemoryLake Console",
+  region: "us-east",
+  description: "Production workspace for B2B admin workflows.",
+  owner: "小明",
+  updatedAt: "2026-06-20T10:30:00.000Z"
+};
+
+const projectActivities = [
+  {
+    title: "Project settings updated",
+    actor: "小明",
+    detail: "Changed region policy and project description.",
+    createdAt: "2026-06-20T10:30:00.000Z"
+  },
+  {
+    title: "Member role changed",
+    actor: "小明",
+    detail: "Updated 小明 2 from operator to admin.",
+    createdAt: "2026-06-18T14:10:00.000Z"
+  },
+  {
+    title: "Security review completed",
+    actor: "小明",
+    detail: "MFA enforcement checked for active members.",
+    createdAt: "2026-06-17T09:45:00.000Z"
+  }
+];
+
+const importTasks = [
+  {
+    fileName: "customers-june.csv",
+    status: "completed",
+    total: 1280,
+    failed: 0,
+    owner: "小明",
+    createdAt: "2026-06-21T09:00:00.000Z"
+  },
+  {
+    fileName: "accounts-partial.csv",
+    status: "failed",
+    total: 420,
+    failed: 18,
+    owner: "小明",
+    createdAt: "2026-06-19T15:40:00.000Z"
+  }
+];
+
 attachThemeToggle({
   root,
   trigger: themeToggle
@@ -92,9 +179,12 @@ seedSelect(userRoleField, getUserRoleOptions(), "Select role");
 seedSelect(userStatusField, getUserStatusOptions(), "Select status");
 bindEvents();
 renderPageActions();
+renderCurrentPage();
 loadUsers();
 
 function bindEvents() {
+  window.addEventListener("hashchange", renderCurrentPage);
+
   refreshButton.addEventListener("click", () => loadUsers());
 
   createUserButton.addEventListener("click", () => {
@@ -206,6 +296,50 @@ function bindEvents() {
   });
 
   document.addEventListener("click", closeOpenMenus);
+
+  startImport.addEventListener("click", startDemoImportTask);
+
+  projectEditToggle.addEventListener("click", () => setProjectEditMode(true));
+  projectCancelEdit.addEventListener("click", () => {
+    renderProjectSettings();
+    setProjectEditMode(false);
+  });
+  projectSettingsForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveProjectSettings();
+  });
+}
+
+function renderCurrentPage() {
+  const requestedPage = window.location.hash.replace("#", "") || "users";
+  currentPage = pageMeta[requestedPage] ? requestedPage : "users";
+  const meta = pageMeta[currentPage];
+
+  pageEyebrow.textContent = meta.eyebrow;
+  pageTitle.textContent = meta.title;
+  pageDescription.textContent = meta.description;
+
+  for (const link of pageLinks) {
+    link.classList.toggle("nav__item--active", link.dataset.pageLink === currentPage);
+  }
+
+  for (const panel of pagePanels) {
+    panel.hidden = panel.dataset.pagePanel !== currentPage;
+  }
+
+  const isUsersPage = currentPage === "users";
+  roleSwitchField.hidden = !isUsersPage;
+  createUserButton.hidden = !isUsersPage;
+  refreshButton.hidden = !isUsersPage;
+
+  if (currentPage === "imports") {
+    renderImportTasks();
+  }
+
+  if (currentPage === "projects") {
+    renderProjectSettings();
+    renderProjectActivity();
+  }
 }
 
 async function loadUsers() {
@@ -474,7 +608,11 @@ function renderStatusBadge(status) {
     active: "success",
     invited: "warning",
     disabled: "neutral",
-    locked: "danger"
+    locked: "danger",
+    completed: "success",
+    validating: "warning",
+    partial: "warning",
+    failed: "danger"
   }[status] || "neutral";
 
   return `<span class="status status--${tone}">${escapeHtml(status)}</span>`;
@@ -904,6 +1042,121 @@ function toCsv(rows, fields) {
   );
 
   return [header, ...body].join("\n");
+}
+
+function renderImportTasks() {
+  importTasksBody.innerHTML = importTasks
+    .map((task) => `
+      <tr>
+        <td><strong>${escapeHtml(task.fileName)}</strong></td>
+        <td>${renderStatusBadge(task.status)}</td>
+        <td>${task.total}</td>
+        <td>${task.failed}</td>
+        <td>${escapeHtml(task.owner)}</td>
+        <td>${formatDate(task.createdAt)}</td>
+      </tr>
+    `)
+    .join("");
+}
+
+async function startDemoImportTask() {
+  startImport.disabled = true;
+  startImport.textContent = "Uploading...";
+
+  await delay(260);
+
+  importTasks.unshift({
+    fileName: "new-customers-demo.csv",
+    status: "validating",
+    total: 0,
+    failed: 0,
+    owner: "小明",
+    createdAt: new Date().toISOString()
+  });
+  renderImportTasks();
+  startImport.textContent = "Validating...";
+
+  await delay(420);
+
+  importTasks[0] = {
+    ...importTasks[0],
+    status: "partial",
+    total: 356,
+    failed: 7
+  };
+  renderImportTasks();
+  startImport.disabled = false;
+  startImport.textContent = "Start demo import";
+}
+
+function renderProjectSettings() {
+  projectName.textContent = project.name;
+  projectSummary.textContent = project.description;
+  projectNameField.value = project.name;
+  projectRegionField.value = project.region;
+  projectDescriptionField.value = project.description;
+  setProjectEditMode(projectEditMode);
+}
+
+function setProjectEditMode(editing) {
+  projectEditMode = editing;
+  projectEditToggle.hidden = editing;
+  projectCancelEdit.hidden = !editing;
+  projectSave.hidden = !editing;
+  projectNameField.disabled = !editing;
+  projectRegionField.disabled = !editing;
+  projectDescriptionField.disabled = !editing;
+}
+
+async function saveProjectSettings() {
+  if (!projectSettingsForm.reportValidity()) return;
+
+  projectSave.disabled = true;
+  projectSave.textContent = "Saving...";
+
+  try {
+    await projectSaveAction.run(async () => {
+      await delay(220);
+      project.name = projectNameField.value.trim();
+      project.region = projectRegionField.value;
+      project.description = projectDescriptionField.value.trim();
+      project.updatedAt = new Date().toISOString();
+      projectActivities.unshift({
+        title: "Project settings updated",
+        actor: "小明",
+        detail: `Updated project name to ${project.name}.`,
+        createdAt: project.updatedAt
+      });
+    });
+
+    setProjectEditMode(false);
+    renderProjectSettings();
+    renderProjectActivity();
+  } finally {
+    projectSave.disabled = false;
+    projectSave.textContent = "Save settings";
+  }
+}
+
+function renderProjectActivity() {
+  projectActivity.innerHTML = projectActivities
+    .map((item) => `
+      <li class="activity-log__item">
+        <span class="activity-log__dot" aria-hidden="true"></span>
+        <div>
+          <strong>${escapeHtml(item.title)}</strong>
+          <p>${escapeHtml(item.detail)}</p>
+          <small>${escapeHtml(item.actor)} · ${formatDate(item.createdAt)}</small>
+        </div>
+      </li>
+    `)
+    .join("");
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function seedSelect(select, options, placeholder) {
