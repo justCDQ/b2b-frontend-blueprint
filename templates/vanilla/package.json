@@ -1,13 +1,12 @@
 {
-  "name": "b2b-frontend-blueprint",
+  "name": "{{projectName}}",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-ready rules and runnable blueprint for B2B console frontends.",
+  "description": "Framework-agnostic B2B console starter generated from B2B Frontend Blueprint.",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
-    "scaffold": "node scripts/create-blueprint.mjs",
     "check": "node scripts/check.mjs",
     "test": "node scripts/smoke-headless.mjs && node scripts/smoke-data.mjs",
     "build": "node scripts/check.mjs && node scripts/smoke-headless.mjs && node scripts/smoke-data.mjs"

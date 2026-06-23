@@ -30,6 +30,14 @@ CLI 的目标是生成一个可用的 2B 控制台项目起点，同时不要过
 
 ## 推荐命令
 
+当前本地 MVP：
+
+```bash
+node scripts/create-blueprint.mjs my-console
+```
+
+未来发布后的命令：
+
 ```bash
 create-b2b-blueprint my-console
 ```
@@ -169,4 +177,3 @@ MVP 之后，CLI 可以逐步支持：
 4. 增加可选 demo module 选择。
 5. 为生成结果增加 smoke test。
 6. 发布为 npm package。
-

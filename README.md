@@ -23,7 +23,7 @@ It is designed to help teams and coding agents generate more consistent 2B front
 This MVP does not include:
 
 - React component source code.
-- CLI installer.
+- Published CLI installer.
 - RBAC implementation.
 - Auth implementation.
 - E2E test project.
@@ -73,6 +73,8 @@ Do not open `apps/demo-vanilla/index.html` directly with `file://`. The demo use
 │   ├── recipes/
 │   └── theme/
 ├── scripts/
+├── templates/
+│   └── vanilla/
 ├── system-rules/
 │   └── component-architecture/
 ├── ROADMAP.md
@@ -236,6 +238,28 @@ The vanilla demo currently covers core B2B console interactions:
 - **Project Settings Detail**: detail page layout, edit mode, settings form, related members table, security switches, section-level forbidden/error states, danger zone, and activity log.
 - **Shared Interaction Patterns**: light/dark theme, pending and duplicate prevention, dangerous action confirmation, local state refresh, section-level state handling, and compact B2B layout.
 
+## Scaffold A Project
+
+Create a new framework-agnostic console starter from the vanilla template:
+
+```bash
+node scripts/create-blueprint.mjs my-console
+```
+
+Then run the generated project:
+
+```bash
+cd my-console
+pnpm build
+pnpm dev
+```
+
+The generated app opens at:
+
+```text
+http://127.0.0.1:4173/apps/web/
+```
+
 ## MVP Status
 
 Current MVP includes:
@@ -247,6 +271,7 @@ Current MVP includes:
 - Initial component architecture system rule.
 - First page demo blueprint.
 - Framework-agnostic runnable demo with list, import, and detail workflows.
+- First local scaffold script and vanilla template.
 
 See [ROADMAP.md](./ROADMAP.md) for planned phases.
 

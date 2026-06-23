@@ -30,6 +30,14 @@ Those can be added after the template shape is stable.
 
 ## Proposed Command
 
+Current local MVP:
+
+```bash
+node scripts/create-blueprint.mjs my-console
+```
+
+Future published command:
+
 ```bash
 create-b2b-blueprint my-console
 ```
@@ -169,4 +177,3 @@ The generated code should follow these rules:
 4. Add optional demo module selection.
 5. Add smoke tests for generated output.
 6. Publish as an npm package.
-
