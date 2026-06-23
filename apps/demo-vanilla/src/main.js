@@ -78,6 +78,10 @@ const projectRegionField = document.querySelector("#project-region-field");
 const projectDescriptionField = document.querySelector("#project-description-field");
 const projectCancelEdit = document.querySelector("#project-cancel-edit");
 const projectSave = document.querySelector("#project-save");
+const projectInviteMember = document.querySelector("#project-invite-member");
+const projectMembersBody = document.querySelector("#project-members-body");
+const projectSecuritySettings = document.querySelector("#project-security-settings");
+const archiveProject = document.querySelector("#archive-project");
 const projectActivity = document.querySelector("#project-activity");
 
 let currentRole = "owner";
@@ -124,11 +128,48 @@ const pageMeta = {
 };
 
 const project = {
-  name: "MemoryLake Console",
+  name: "Blueprint Console",
   region: "us-east",
   description: "Production workspace for B2B admin workflows.",
   owner: "小明",
+  archived: false,
   updatedAt: "2026-06-20T10:30:00.000Z"
+};
+
+const projectMembers = [
+  {
+    id: "member-001",
+    name: "小明",
+    email: "xiaoming@example.com",
+    role: "owner",
+    status: "active",
+    lastActiveAt: "2026-06-10T09:12:00.000Z",
+    removable: false,
+    disabledReason: "不能移除项目 Owner。"
+  },
+  {
+    id: "member-002",
+    name: "小明 2",
+    email: "xiaoming2@example.com",
+    role: "admin",
+    status: "active",
+    lastActiveAt: "2026-06-09T16:30:00.000Z",
+    removable: true
+  },
+  {
+    id: "member-003",
+    name: "小明 3",
+    email: "xiaoming3@example.com",
+    role: "operator",
+    status: "invited",
+    removable: true
+  }
+];
+
+const projectSecurity = {
+  enforceMfa: true,
+  restrictExports: false,
+  apiSecretAccess: false
 };
 
 const projectActivities = [
@@ -324,6 +365,10 @@ function bindEvents() {
     event.preventDefault();
     saveProjectSettings();
   });
+  projectInviteMember.addEventListener("click", inviteProjectMember);
+  projectMembersBody.addEventListener("click", handleProjectMemberAction);
+  projectSecuritySettings.addEventListener("click", handleProjectSecurityAction);
+  archiveProject.addEventListener("click", () => openConfirmDialog(createArchiveProjectConfirm()));
 }
 
 function renderCurrentPage() {
@@ -355,6 +400,8 @@ function renderCurrentPage() {
 
   if (currentPage === "projects") {
     renderProjectSettings();
+    renderProjectMembers();
+    renderProjectSecurity();
     renderProjectActivity();
   }
 }
@@ -959,6 +1006,60 @@ function createBatchDeleteConfirm(rows, eligibleRows) {
   };
 }
 
+function createRemoveProjectMemberConfirm(member) {
+  return {
+    tone: "danger",
+    eyebrow: "Dangerous action",
+    title: `Remove ${member.name} from project?`,
+    description: "This member will lose project access immediately. The user account itself will not be deleted.",
+    subject: `${member.name} · ${member.email}`,
+    submitLabel: "Remove member",
+    action: async () => {
+      await delay(180);
+      const index = projectMembers.findIndex((item) => item.id === member.id);
+
+      if (index >= 0) {
+        projectMembers.splice(index, 1);
+      }
+
+      projectActivities.unshift({
+        title: "Member removed",
+        actor: "小明",
+        detail: `Removed ${member.name} from ${project.name}.`,
+        createdAt: new Date().toISOString()
+      });
+      renderProjectMembers();
+      renderProjectActivity();
+      return "Member removed.";
+    }
+  };
+}
+
+function createArchiveProjectConfirm() {
+  return {
+    tone: "danger",
+    eyebrow: "Dangerous action",
+    title: `Archive ${project.name}?`,
+    description: "The project will become read-only. Active imports and member changes should be completed before archiving.",
+    subject: `${project.name} · ${project.region}`,
+    submitLabel: "Archive project",
+    action: async () => {
+      await delay(220);
+      project.archived = true;
+      project.updatedAt = new Date().toISOString();
+      projectActivities.unshift({
+        title: "Project archived",
+        actor: "小明",
+        detail: `${project.name} was archived and is now read-only.`,
+        createdAt: project.updatedAt
+      });
+      renderProjectSettings();
+      renderProjectActivity();
+      return "Project archived.";
+    }
+  };
+}
+
 function openConfirmDialog(config) {
   closeAllMenus();
   confirmState = config;
@@ -1275,10 +1376,12 @@ function downloadImportErrors() {
 
 function renderProjectSettings() {
   projectName.textContent = project.name;
-  projectSummary.textContent = project.description;
+  projectSummary.textContent = project.archived ? `${project.description} Archived projects are read-only.` : project.description;
   projectNameField.value = project.name;
   projectRegionField.value = project.region;
   projectDescriptionField.value = project.description;
+  archiveProject.disabled = project.archived;
+  archiveProject.textContent = project.archived ? "Project archived" : "Archive project";
   setProjectEditMode(projectEditMode);
 }
 
@@ -1290,6 +1393,132 @@ function setProjectEditMode(editing) {
   projectNameField.disabled = !editing;
   projectRegionField.disabled = !editing;
   projectDescriptionField.disabled = !editing;
+}
+
+function renderProjectMembers() {
+  projectMembersBody.innerHTML = projectMembers
+    .map((member) => `
+      <tr>
+        <td>
+          <div class="user-cell">
+            <span class="avatar" aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span>
+            <span>
+              <strong>${escapeHtml(member.name)}</strong>
+              <small>${escapeHtml(member.email)}</small>
+            </span>
+          </div>
+        </td>
+        <td><span class="tag">${escapeHtml(member.role)}</span></td>
+        <td>${renderStatusBadge(member.status)}</td>
+        <td>${formatDate(member.lastActiveAt)}</td>
+        <td class="operation-cell">
+          <button
+            class="icon-action icon-action--danger"
+            data-remove-project-member="${escapeAttribute(member.id)}"
+            type="button"
+            title="${escapeAttribute(member.removable ? "Remove member" : member.disabledReason)}"
+            ${member.removable ? "" : "disabled"}
+          >
+            Remove
+          </button>
+        </td>
+      </tr>
+    `)
+    .join("");
+}
+
+function renderProjectSecurity() {
+  projectSecuritySettings.innerHTML = `
+    ${renderSecuritySetting({
+      key: "enforceMfa",
+      title: "Require MFA",
+      description: "Members must complete multi-factor authentication before accessing this project.",
+      enabled: projectSecurity.enforceMfa
+    })}
+    ${renderSecuritySetting({
+      key: "restrictExports",
+      title: "Restrict exports",
+      description: "Only owner and admin roles can export project data.",
+      enabled: projectSecurity.restrictExports
+    })}
+    ${renderSecuritySetting({
+      key: "apiSecretAccess",
+      title: "Production API secret access",
+      description: "Current role cannot enable access to production secrets from this demo.",
+      enabled: projectSecurity.apiSecretAccess,
+      disabled: true,
+      reason: "当前角色没有修改生产密钥权限。"
+    })}
+  `;
+}
+
+function renderSecuritySetting({ key, title, description, enabled, disabled = false, reason = "" }) {
+  return `
+    <div class="settings-list__item">
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(description)}</span>
+      </div>
+      <button
+        class="switch-action ${enabled ? "switch-action--on" : ""}"
+        data-security-setting="${escapeAttribute(key)}"
+        type="button"
+        aria-label="${escapeAttribute(title)}"
+        title="${escapeAttribute(disabled ? reason : "Toggle setting")}"
+        ${disabled ? "disabled" : ""}
+      >
+        <span></span>
+      </button>
+    </div>
+  `;
+}
+
+function inviteProjectMember() {
+  const nextMember = {
+    id: `member-${String(projectMembers.length + 1).padStart(3, "0")}`,
+    name: `小明 ${projectMembers.length + 1}`,
+    email: `xiaoming${projectMembers.length + 1}@example.com`,
+    role: "viewer",
+    status: "invited",
+    removable: true
+  };
+
+  projectMembers.push(nextMember);
+  projectActivities.unshift({
+    title: "Member invited",
+    actor: "小明",
+    detail: `Invited ${nextMember.name} as viewer.`,
+    createdAt: new Date().toISOString()
+  });
+  renderProjectMembers();
+  renderProjectActivity();
+}
+
+function handleProjectMemberAction(event) {
+  const memberId = event.target.closest("[data-remove-project-member]")?.dataset.removeProjectMember;
+
+  if (!memberId) return;
+
+  const member = projectMembers.find((item) => item.id === memberId);
+
+  if (!member?.removable) return;
+  openConfirmDialog(createRemoveProjectMemberConfirm(member));
+}
+
+function handleProjectSecurityAction(event) {
+  const key = event.target.closest("[data-security-setting]")?.dataset.securitySetting;
+
+  if (!key || key === "apiSecretAccess") return;
+
+  projectSecurity[key] = !projectSecurity[key];
+  projectActivities.unshift({
+    title: "Security setting changed",
+    actor: "小明",
+    detail: `${key} changed to ${projectSecurity[key] ? "enabled" : "disabled"}.`,
+    createdAt: new Date().toISOString()
+  });
+  renderProjectSecurity();
+  renderProjectActivity();
 }
 
 async function saveProjectSettings() {

@@ -135,7 +135,7 @@
               <div class="section-header">
                 <div>
                   <p class="eyebrow">Project detail</p>
-                  <h2 id="project-name">MemoryLake Console</h2>
+                  <h2 id="project-name">Blueprint Console</h2>
                   <p id="project-summary">Production workspace for B2B admin workflows.</p>
                 </div>
                 <button class="button button--secondary" id="project-edit-toggle" type="button">Edit settings</button>
@@ -170,6 +170,71 @@
                   <button class="button button--primary" id="project-save" type="submit">Save settings</button>
                 </div>
               </form>
+            </section>
+
+            <section class="table-shell">
+              <div class="section-header">
+                <div>
+                  <h2>Members</h2>
+                  <p>Related users can be reviewed without leaving the project detail page.</p>
+                </div>
+                <button class="button button--secondary" id="project-invite-member" type="button">Invite member</button>
+              </div>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Last active</th>
+                      <th class="operation-cell">Operations</th>
+                    </tr>
+                  </thead>
+                  <tbody id="project-members-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="detail-shell">
+              <div class="section-header">
+                <div>
+                  <h2>Security</h2>
+                  <p>Security settings use immediate controls with disabled reasons.</p>
+                </div>
+              </div>
+              <div class="settings-list" id="project-security-settings"></div>
+            </section>
+
+            <section class="detail-shell">
+              <div class="section-header">
+                <div>
+                  <h2>Section states</h2>
+                  <p>Detail pages need section-level state handling, not only whole-page failure.</p>
+                </div>
+              </div>
+              <div class="section-state-grid">
+                <div class="section-state">
+                  <strong>Billing section unavailable</strong>
+                  <span>Billing data failed to load. Other project sections remain usable.</span>
+                  <button class="button button--secondary" type="button" disabled>Retry billing</button>
+                </div>
+                <div class="section-state section-state--forbidden">
+                  <strong>API secrets hidden</strong>
+                  <span>Current role can view security posture but cannot reveal production secrets.</span>
+                  <button class="button button--secondary" type="button" disabled title="当前角色没有查看生产密钥权限。">Reveal secrets</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="detail-shell danger-zone">
+              <div class="section-header">
+                <div>
+                  <h2>Danger zone</h2>
+                  <p>Destructive project actions are isolated and always require ConfirmDialog.</p>
+                </div>
+                <button class="button button--danger" id="archive-project" type="button">Archive project</button>
+              </div>
             </section>
 
             <section class="table-shell">
