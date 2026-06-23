@@ -2,7 +2,7 @@ import { readdirSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const roots = ["apps", "packages", "scripts"];
+const roots = ["apps", "packages", "scripts", "templates"];
 const extensions = new Set([".js", ".mjs"]);
 const files = [];
 

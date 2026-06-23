@@ -33,7 +33,7 @@ Those can be added after the template shape is stable.
 Current local MVP:
 
 ```bash
-node scripts/create-blueprint.mjs my-console
+node scripts/create-blueprint.mjs my-console --template vanilla --with-demo
 ```
 
 Future published command:
@@ -45,13 +45,19 @@ create-b2b-blueprint my-console
 Optional flags:
 
 ```bash
-create-b2b-blueprint my-console --template vanilla
-create-b2b-blueprint my-console --template react
-create-b2b-blueprint my-console --with-demo
-create-b2b-blueprint my-console --without-demo
-create-b2b-blueprint my-console --i18n zh,en
-create-b2b-blueprint my-console --theme light,dark
+node scripts/create-blueprint.mjs --target my-console --template vanilla
+node scripts/create-blueprint.mjs my-console --with-demo
+node scripts/create-blueprint.mjs my-console --without-demo
+node scripts/create-blueprint.mjs my-console --force
 ```
+
+Current scaffold smoke test:
+
+```bash
+pnpm test:scaffold
+```
+
+Future CLI flags can add framework templates, i18n selection, theme presets, and optional modules after the local scaffold is stable.
 
 ## Template Levels
 
@@ -121,6 +127,8 @@ The first reusable template should include these demo modules:
 - Import Records.
 - Project Settings Detail.
 - Activity Log.
+
+When `--without-demo` is used, the generated project keeps the packages and scripts but replaces the app with a minimal shell. This keeps the project buildable while giving users a clean starting point.
 
 Each module should keep:
 

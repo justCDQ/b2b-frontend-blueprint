@@ -33,7 +33,7 @@ CLI 的目标是生成一个可用的 2B 控制台项目起点，同时不要过
 当前本地 MVP：
 
 ```bash
-node scripts/create-blueprint.mjs my-console
+node scripts/create-blueprint.mjs my-console --template vanilla --with-demo
 ```
 
 未来发布后的命令：
@@ -45,13 +45,19 @@ create-b2b-blueprint my-console
 可选参数：
 
 ```bash
-create-b2b-blueprint my-console --template vanilla
-create-b2b-blueprint my-console --template react
-create-b2b-blueprint my-console --with-demo
-create-b2b-blueprint my-console --without-demo
-create-b2b-blueprint my-console --i18n zh,en
-create-b2b-blueprint my-console --theme light,dark
+node scripts/create-blueprint.mjs --target my-console --template vanilla
+node scripts/create-blueprint.mjs my-console --with-demo
+node scripts/create-blueprint.mjs my-console --without-demo
+node scripts/create-blueprint.mjs my-console --force
 ```
+
+当前 scaffold smoke test：
+
+```bash
+pnpm test:scaffold
+```
+
+未来正式 CLI 可以在本地 scaffold 稳定后继续增加框架模板、i18n 选择、主题预设和可选模块。
 
 ## 模板层级
 
@@ -121,6 +127,8 @@ my-console/
 - Import Records。
 - Project Settings Detail。
 - Activity Log。
+
+使用 `--without-demo` 时，生成项目会保留 packages 和 scripts，但将应用替换成最小 shell。这样既能保持项目可构建，也能给用户一个干净起点。
 
 每个模块都应该保留：
 

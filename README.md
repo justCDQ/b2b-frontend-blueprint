@@ -243,7 +243,7 @@ The vanilla demo currently covers core B2B console interactions:
 Create a new framework-agnostic console starter from the vanilla template:
 
 ```bash
-node scripts/create-blueprint.mjs my-console
+node scripts/create-blueprint.mjs my-console --template vanilla --with-demo
 ```
 
 Then run the generated project:
@@ -258,6 +258,22 @@ The generated app opens at:
 
 ```text
 http://127.0.0.1:4173/apps/web/
+```
+
+Supported scaffold options:
+
+```text
+--target <path>       Target directory. Overrides positional project name.
+--template vanilla    Template name. Currently only vanilla is supported.
+--with-demo           Include demo modules. Default.
+--without-demo        Generate the app shell without demo modules.
+--force               Overwrite target files.
+```
+
+Validate scaffold output:
+
+```bash
+pnpm test:scaffold
 ```
 
 ## MVP Status

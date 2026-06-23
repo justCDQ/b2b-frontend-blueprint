@@ -10,7 +10,8 @@
     "scaffold": "node scripts/create-blueprint.mjs",
     "check": "node scripts/check.mjs",
     "test": "node scripts/smoke-headless.mjs && node scripts/smoke-data.mjs",
-    "build": "node scripts/check.mjs && node scripts/smoke-headless.mjs && node scripts/smoke-data.mjs"
+    "test:scaffold": "node scripts/smoke-scaffold.mjs",
+    "build": "node scripts/check.mjs && node scripts/smoke-headless.mjs && node scripts/smoke-data.mjs && node scripts/smoke-scaffold.mjs"
   },
   "packageManager": "pnpm@8.1.0"
 }
