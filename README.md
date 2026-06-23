@@ -90,6 +90,8 @@ Recommended entry points:
 - [规则写作指南](./docs/rule-authoring-guide.zh.md): 中文规则维护指南。
 - [Template Architecture](./docs/template-architecture.md): future monorepo and package architecture.
 - [模板架构蓝图](./docs/template-architecture.zh.md): 未来代码模板的工程结构。
+- [CLI Template Scaffold Design](./docs/cli-template-scaffold.md): planned CLI and reusable template design.
+- [CLI 模板脚手架设计](./docs/cli-template-scaffold.zh.md): CLI 与可复用模板设计。
 - [MVP Implementation Plan](./docs/mvp-implementation-plan.md): first runnable code MVP plan.
 - [MVP 实施计划](./docs/mvp-implementation-plan.zh.md): 第一版可运行代码 MVP 执行计划。
 - [Prompt Examples](./examples/prompts/README.md): prompt templates for AI coding tools.
@@ -225,6 +227,15 @@ The first runnable app is zero-dependency vanilla HTML/CSS/JavaScript:
 - `packages/recipes`
 - `packages/data`
 
+## Demo Capabilities
+
+The vanilla demo currently covers core B2B console interactions:
+
+- **User Management**: filter bar, data table, pagination, selection, batch actions, row detail, create/edit dialog, ConfirmDialog, permission disabled states, loading, empty, error, and request race handling.
+- **Import Records**: upload workflow, wizard stepper, field mapping, validation errors, failed-row download, result summary, recent import tasks, and partial failure state.
+- **Project Settings Detail**: detail page layout, edit mode, settings form, related members table, security switches, section-level forbidden/error states, danger zone, and activity log.
+- **Shared Interaction Patterns**: light/dark theme, pending and duplicate prevention, dangerous action confirmation, local state refresh, section-level state handling, and compact B2B layout.
+
 ## MVP Status
 
 Current MVP includes:
@@ -235,7 +246,7 @@ Current MVP includes:
 - AI bundle entry points.
 - Initial component architecture system rule.
 - First page demo blueprint.
-- Framework-agnostic runnable skeleton.
+- Framework-agnostic runnable demo with list, import, and detail workflows.
 
 See [ROADMAP.md](./ROADMAP.md) for planned phases.
 
