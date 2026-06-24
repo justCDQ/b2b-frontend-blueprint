@@ -3,6 +3,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const supportedTemplates = ["vanilla"];
 
 const args = process.argv.slice(2);
 const options = parseArgs(args);
@@ -13,6 +14,12 @@ if (!options.target) {
   process.exit(1);
 }
 
+if (!supportedTemplates.includes(options.template)) {
+  console.error(`Unsupported template: ${options.template}`);
+  console.error(`Supported templates: ${supportedTemplates.join(", ")}`);
+  process.exit(1);
+}
+
 const targetRoot = resolve(process.cwd(), options.target);
 const projectName = toPackageName(basename(targetRoot));
 const projectTitle = toTitle(projectName);
@@ -20,6 +27,16 @@ const projectTitle = toTitle(projectName);
 if (!existsSync(templateRoot)) {
   console.error(`Template not found: ${options.template}`);
   process.exit(1);
+}
+
+if (options.dryRun) {
+  printDryRun({
+    targetRoot,
+    projectTitle,
+    templateRoot,
+    options
+  });
+  process.exit(0);
 }
 
 if (existsSync(targetRoot) && !options.force) {
@@ -48,6 +65,10 @@ writeBlueprintConfig(targetRoot, {
   template: options.template,
   withDemo: options.withDemo
 });
+writeProjectReadme(targetRoot, {
+  projectTitle,
+  withDemo: options.withDemo
+});
 
 console.log(`Created ${projectTitle} at ${targetRoot}`);
 console.log("");
@@ -72,14 +93,18 @@ function printHelp() {
   console.log("  --with-demo           Include demo modules. Default.");
   console.log("  --without-demo        Generate the app shell without demo modules.");
   console.log("  --force               Overwrite target files.");
+  console.log("  --dry-run             Preview planned output without writing files.");
 }
 
 function parseArgs(values) {
   const parsed = {
+    dryRun: false,
     force: false,
     target: "",
     template: "vanilla",
-    withDemo: true
+    withDemo: true,
+    withDemoFlag: false,
+    withoutDemoFlag: false
   };
 
   for (let index = 0; index < values.length; index += 1) {
@@ -90,24 +115,31 @@ function parseArgs(values) {
       continue;
     }
 
+    if (value === "--dry-run") {
+      parsed.dryRun = true;
+      continue;
+    }
+
     if (value === "--with-demo") {
       parsed.withDemo = true;
+      parsed.withDemoFlag = true;
       continue;
     }
 
     if (value === "--without-demo") {
       parsed.withDemo = false;
+      parsed.withoutDemoFlag = true;
       continue;
     }
 
     if (value === "--target") {
-      parsed.target = values[index + 1] || "";
+      parsed.target = readOptionValue(values, index, "--target");
       index += 1;
       continue;
     }
 
     if (value === "--template") {
-      parsed.template = values[index + 1] || "vanilla";
+      parsed.template = readOptionValue(values, index, "--template");
       index += 1;
       continue;
     }
@@ -121,12 +153,87 @@ function parseArgs(values) {
     process.exit(1);
   }
 
+  if (parsed.withDemoFlag && parsed.withoutDemoFlag) {
+    console.error("Use either --with-demo or --without-demo, not both.");
+    process.exit(1);
+  }
+
   return parsed;
+}
+
+function readOptionValue(values, index, optionName) {
+  const value = values[index + 1];
+
+  if (!value || value.startsWith("--")) {
+    console.error(`${optionName} requires a value.`);
+    process.exit(1);
+  }
+
+  return value;
+}
+
+function printDryRun({ targetRoot, projectTitle, templateRoot, options }) {
+  const exists = existsSync(targetRoot);
+  const fileCount = countFiles(templateRoot);
+
+  console.log("Blueprint scaffold dry run");
+  console.log("");
+  console.log(`Target: ${targetRoot}`);
+  console.log(`Project title: ${projectTitle}`);
+  console.log(`Template: ${options.template}`);
+  console.log(`Demo modules: ${options.withDemo ? "included" : "removed"}`);
+  console.log(`Template files: ${fileCount}`);
+  console.log("");
+  console.log("Planned output:");
+  console.log(`- Copy templates/${options.template}/ into target directory.`);
+  console.log("- Generate blueprint.config.js.");
+  console.log("- Generate README.md for selected demo mode.");
+
+  if (!options.withDemo) {
+    console.log("- Replace demo app with the minimal app shell.");
+  }
+
+  console.log("- Replace project placeholders.");
+  console.log("");
+
+  if (exists && !options.force) {
+    console.log("Target already exists. Real generation would require --force.");
+  } else if (exists && options.force) {
+    console.log("Target already exists. Real generation would overwrite files because --force is set.");
+  } else {
+    console.log("Target does not exist. Real generation would create it.");
+  }
+
+  console.log("");
+  console.log("No files were written.");
+}
+
+function countFiles(directory) {
+  let count = 0;
+
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry);
+    const stat = statSync(path);
+
+    if (stat.isDirectory()) {
+      count += countFiles(path);
+      continue;
+    }
+
+    count += 1;
+  }
+
+  return count;
 }
 
 function writeBlueprintConfig(targetRoot, options) {
   const config = `export default {
   appName: ${JSON.stringify(options.projectTitle)},
+  apiBaseUrl: "",
+  defaultLocale: "zh",
+  defaultTheme: "system",
+  density: "comfortable",
+  enabledModules: ${JSON.stringify(options.withDemo ? ["users", "imports", "projects"] : [])},
   template: ${JSON.stringify(options.template)},
   demoModules: ${JSON.stringify(options.withDemo ? ["users", "imports", "projects"] : [])},
   themeModes: ["light", "dark"],
@@ -135,6 +242,78 @@ function writeBlueprintConfig(targetRoot, options) {
 `;
 
   writeFileSync(join(targetRoot, "blueprint.config.js"), config);
+}
+
+function writeProjectReadme(targetRoot, options) {
+  const demoSection = options.withDemo
+    ? `## Included Demo Modules
+
+- User Management
+- Import Records
+- Project Settings Detail
+- Activity Log
+`
+    : `## App Shell
+
+This project was generated without demo modules.
+
+Start from:
+
+- \`apps/web/index.html\`
+- \`apps/web/src/main.js\`
+- \`apps/web/src/styles.css\`
+
+Add feature modules under \`apps/web/src\` and keep reusable behavior in \`packages/headless\`.
+`;
+
+  const readme = `# ${options.projectTitle}
+
+Framework-agnostic B2B console starter generated from B2B Frontend Blueprint.
+
+## Run
+
+\`\`\`bash
+pnpm dev
+\`\`\`
+
+Open:
+
+\`\`\`text
+http://127.0.0.1:4173/apps/web/
+\`\`\`
+
+Do not open \`apps/web/index.html\` through \`file://\`; the app uses ES modules and package imports.
+
+${demoSection}
+
+## Configuration
+
+Project metadata lives in:
+
+\`\`\`text
+blueprint.config.js
+\`\`\`
+
+## Packages
+
+- \`packages/theme\`: design tokens and theme CSS.
+- \`packages/runtime-config\`: normalized app runtime configuration.
+- \`packages/i18n\`: lightweight dictionaries, translation, and date formatting.
+- \`packages/headless\`: framework-free interaction controllers.
+- \`packages/data\`: mock API contracts and fixtures.
+- \`packages/dom\`: DOM adapters.
+- \`packages/recipes\`: component recipe metadata.
+
+## Scripts
+
+\`\`\`bash
+pnpm build
+pnpm test
+pnpm check
+\`\`\`
+`;
+
+  writeFileSync(join(targetRoot, "README.md"), readme);
 }
 
 function stripDemoModules(targetRoot) {
@@ -156,7 +335,7 @@ function stripDemoModules(targetRoot) {
   <body>
     <main class="empty-shell">
       <p class="eyebrow">B2B Blueprint</p>
-      <h1>{{projectTitle}}</h1>
+      <h1 data-app-title>{{projectTitle}}</h1>
       <p>Start building your console by adding modules under <code>apps/web/src</code>.</p>
       <button class="button button--primary" id="theme-toggle" type="button">Switch to dark</button>
     </main>
@@ -168,12 +347,31 @@ function stripDemoModules(targetRoot) {
 
   writeFileSync(
     mainPath,
-    `import { attachThemeToggle } from "../../../packages/dom/src/index.js";
+    `import { attachThemeController } from "../../../packages/dom/src/index.js";
+import { createI18n } from "../../../packages/i18n/src/index.js";
+import { createRuntimeConfig } from "../../../packages/runtime-config/src/index.js";
+import blueprintConfig from "../../../blueprint.config.js";
 
-attachThemeToggle({
-  root: document.documentElement,
-  trigger: document.querySelector("#theme-toggle")
+const config = createRuntimeConfig(blueprintConfig);
+const i18n = createI18n({
+  locale: config.defaultLocale
 });
+const title = config.appName || "B2B Console";
+
+attachThemeController({
+  root: document.documentElement,
+  trigger: document.querySelector("#theme-toggle"),
+  defaultTheme: config.defaultTheme,
+  density: config.density,
+  labels: {
+    light: i18n.t("app.theme.switchToLight"),
+    dark: i18n.t("app.theme.switchToDark")
+  }
+});
+
+document.title = title;
+document.documentElement.lang = i18n.locale;
+document.querySelector("[data-app-title]").textContent = title;
 `
   );
 

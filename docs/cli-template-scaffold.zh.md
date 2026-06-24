@@ -49,6 +49,7 @@ node scripts/create-blueprint.mjs --target my-console --template vanilla
 node scripts/create-blueprint.mjs my-console --with-demo
 node scripts/create-blueprint.mjs my-console --without-demo
 node scripts/create-blueprint.mjs my-console --force
+node scripts/create-blueprint.mjs my-console --dry-run
 ```
 
 当前 scaffold smoke test：
@@ -58,6 +59,17 @@ pnpm test:scaffold
 ```
 
 未来正式 CLI 可以在本地 scaffold 稳定后继续增加框架模板、i18n 选择、主题预设和可选模块。
+
+当前参数校验行为：
+
+- 不支持的 template 会失败，并列出当前支持的 template。
+- `--with-demo` 和 `--without-demo` 不能同时使用。
+- `--target` 和 `--template` 必须提供明确值。
+- 目标目录已存在时必须使用 `--force`。
+- `--dry-run` 只输出将要生成的内容，不写入文件。
+- `--dry-run` 可以预览已存在目录；真实生成仍然需要 `--force`。
+- 生成应用会读取 `blueprint.config.js` 中的项目元数据。
+- 生成 README 会根据 `--with-demo` 或 `--without-demo` 输出不同内容。
 
 ## 模板层级
 
@@ -82,6 +94,8 @@ apps/web/
 │   └── shared/
 packages/
 ├── theme/
+├── runtime-config/
+├── i18n/
 ├── headless/
 ├── data/
 └── dom/
@@ -106,6 +120,8 @@ my-console/
 │   └── web/
 ├── packages/
 │   ├── theme/
+│   ├── runtime-config/
+│   ├── i18n/
 │   ├── headless/
 │   ├── data/
 │   ├── dom/

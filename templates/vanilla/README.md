@@ -26,6 +26,8 @@ Do not open `apps/web/index.html` through `file://`; the app uses ES modules and
 ## Packages
 
 - `packages/theme`: design tokens and theme CSS.
+- `packages/runtime-config`: normalized app runtime configuration.
+- `packages/i18n`: lightweight dictionaries, translation, and date formatting.
 - `packages/headless`: framework-free interaction controllers.
 - `packages/data`: mock API contracts and fixtures.
 - `packages/dom`: DOM adapters.
@@ -38,4 +40,3 @@ pnpm build
 pnpm test
 pnpm check
 ```
-

@@ -49,6 +49,7 @@ node scripts/create-blueprint.mjs --target my-console --template vanilla
 node scripts/create-blueprint.mjs my-console --with-demo
 node scripts/create-blueprint.mjs my-console --without-demo
 node scripts/create-blueprint.mjs my-console --force
+node scripts/create-blueprint.mjs my-console --dry-run
 ```
 
 Current scaffold smoke test:
@@ -58,6 +59,17 @@ pnpm test:scaffold
 ```
 
 Future CLI flags can add framework templates, i18n selection, theme presets, and optional modules after the local scaffold is stable.
+
+Current validation behavior:
+
+- Unsupported templates fail with the supported template list.
+- `--with-demo` and `--without-demo` cannot be used together.
+- `--target` and `--template` require explicit values.
+- Existing target folders require `--force`.
+- `--dry-run` prints the planned output and writes no files.
+- `--dry-run` can inspect an existing target without `--force`; real generation still requires `--force`.
+- Generated apps read `blueprint.config.js` for project metadata.
+- Generated README content changes based on `--with-demo` or `--without-demo`.
 
 ## Template Levels
 
@@ -82,6 +94,8 @@ apps/web/
 │   └── shared/
 packages/
 ├── theme/
+├── runtime-config/
+├── i18n/
 ├── headless/
 ├── data/
 └── dom/
@@ -106,6 +120,8 @@ my-console/
 │   └── web/
 ├── packages/
 │   ├── theme/
+│   ├── runtime-config/
+│   ├── i18n/
 │   ├── headless/
 │   ├── data/
 │   ├── dom/

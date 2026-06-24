@@ -224,6 +224,8 @@ The first runnable app is zero-dependency vanilla HTML/CSS/JavaScript:
 
 - `apps/demo-vanilla`
 - `packages/theme`
+- `packages/runtime-config`
+- `packages/i18n`
 - `packages/headless`
 - `packages/dom`
 - `packages/recipes`
@@ -268,7 +270,10 @@ Supported scaffold options:
 --with-demo           Include demo modules. Default.
 --without-demo        Generate the app shell without demo modules.
 --force               Overwrite target files.
+--dry-run             Preview planned output without writing files.
 ```
+
+The generated project includes `blueprint.config.js`. The app reads this file for project metadata such as `appName`, and the generated README changes based on `--with-demo` or `--without-demo`.
 
 Validate scaffold output:
 

@@ -13,9 +13,18 @@ import {
   resetUserPassword,
   updateUserRecord
 } from "../../../packages/data/src/index.js";
-import { attachThemeToggle } from "../../../packages/dom/src/index.js";
+import { attachThemeController } from "../../../packages/dom/src/index.js";
+import { createI18n } from "../../../packages/i18n/src/index.js";
+import { createRuntimeConfig } from "../../../packages/runtime-config/src/index.js";
+import blueprintConfig from "../../../blueprint.config.js";
 
 const root = document.documentElement;
+const config = createRuntimeConfig(blueprintConfig);
+const i18n = createI18n({
+  locale: config.defaultLocale
+});
+const appName = config.appName;
+const brand = document.querySelector(".brand");
 const pageEyebrow = document.querySelector("#page-eyebrow");
 const pageTitle = document.querySelector("#page-title");
 const pageDescription = document.querySelector("#page-description");
@@ -111,19 +120,19 @@ const confirmAction = createPendingAction();
 
 const pageMeta = {
   users: {
-    eyebrow: "Framework-agnostic demo",
-    title: "Users",
-    description: "Manage organization members, roles, and access status."
+    eyebrow: i18n.t("page.users.eyebrow"),
+    title: i18n.t("page.users.title"),
+    description: i18n.t("page.users.description")
   },
   imports: {
-    eyebrow: "Upload workflow demo",
-    title: "Import Records",
-    description: "Validate uploaded records, review failures, and track async import tasks."
+    eyebrow: i18n.t("page.imports.eyebrow"),
+    title: i18n.t("page.imports.title"),
+    description: i18n.t("page.imports.description")
   },
   projects: {
-    eyebrow: "Detail page demo",
-    title: "Project Settings",
-    description: "Edit project configuration, review related data, and scan audit history."
+    eyebrow: i18n.t("page.projects.eyebrow"),
+    title: i18n.t("page.projects.title"),
+    description: i18n.t("page.projects.description")
   }
 };
 
@@ -225,11 +234,20 @@ const importValidationRows = [
   { row: 88, field: "status", issue: "Status must be active or disabled." }
 ];
 
-attachThemeToggle({
+attachThemeController({
   root,
-  trigger: themeToggle
+  trigger: themeToggle,
+  defaultTheme: config.defaultTheme,
+  density: config.density,
+  labels: {
+    light: i18n.t("app.theme.switchToLight"),
+    dark: i18n.t("app.theme.switchToDark")
+  }
 });
 
+document.title = appName;
+brand.textContent = appName;
+applyStaticText();
 seedSelect(roleFilter, getUserRoleOptions(), "All roles");
 seedSelect(statusFilter, getUserStatusOptions(), "All statuses");
 seedSelect(userRoleField, getUserRoleOptions(), "Select role");
@@ -369,6 +387,21 @@ function bindEvents() {
   projectMembersBody.addEventListener("click", handleProjectMemberAction);
   projectSecuritySettings.addEventListener("click", handleProjectSecurityAction);
   archiveProject.addEventListener("click", () => openConfirmDialog(createArchiveProjectConfirm()));
+}
+
+function applyStaticText() {
+  root.lang = i18n.locale;
+  document.querySelector('[data-page-link="users"]').textContent = i18n.t("app.nav.users");
+  document.querySelector('[data-page-link="imports"]').textContent = i18n.t("app.nav.imports");
+  document.querySelector('[data-page-link="projects"]').textContent = i18n.t("app.nav.projects");
+  roleSwitchField.querySelector("span").textContent = i18n.t("app.role.label");
+  refreshButton.textContent = i18n.t("app.actions.refresh");
+  createUserButton.textContent = i18n.t("app.actions.createUser");
+  resetFilters.textContent = i18n.t("app.actions.reset");
+  batchExport.textContent = i18n.t("app.actions.export");
+  batchDisable.textContent = i18n.t("app.actions.disable");
+  batchDelete.textContent = i18n.t("app.actions.delete");
+  clearSelection.textContent = i18n.t("app.actions.clearSelection");
 }
 
 function renderCurrentPage() {
@@ -658,7 +691,7 @@ function hideStatus() {
 
 function setLoading(loading) {
   refreshButton.disabled = loading;
-  refreshButton.textContent = loading ? "Refreshing..." : "Refresh";
+  refreshButton.textContent = loading ? i18n.t("app.actions.refreshing") : i18n.t("app.actions.refresh");
 }
 
 function renderPageActions() {
@@ -1583,12 +1616,7 @@ function hasActiveFilters() {
 }
 
 function formatDate(value) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric"
-  }).format(new Date(value));
+  return i18n.formatDate(value);
 }
 
 function escapeHtml(value) {
