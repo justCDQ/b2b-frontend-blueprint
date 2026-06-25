@@ -1,31 +1,27 @@
 # Getting Started
 
-This repository is a rules-first blueprint for building B2B console interfaces with AI-assisted development.
+B2B Frontend Blueprint helps teams and AI coding agents build enterprise console interfaces with clearer interaction rules and a reusable starter template.
 
-It is useful when you want AI to generate enterprise UI code that behaves like a real console product instead of a generic marketing page or a loose component demo.
+Use it for:
 
-## Who This Is For
+- B2B admin consoles.
+- SaaS back offices.
+- Internal tools.
+- Data operation platforms.
+- AI-assisted page generation and review.
 
-Use this repository if you are:
+## What To Do First
 
-- Designing a reusable B2B frontend template.
-- Building admin consoles, SaaS back offices, internal tools, CRM/ERP-style systems, or data operation platforms.
-- Writing prompts for AI coding tools.
-- Reviewing whether generated UI follows enterprise interaction conventions.
-- Turning component-level design experience into reusable engineering rules.
-
-## What To Read First
-
-For a quick overview:
-
-1. Read [README.md](../README.md).
-2. Read [component-rules/README.md](../component-rules/README.md).
-3. Read [component-rules/_inventory/rules-inventory.md](../component-rules/_inventory/rules-inventory.md).
-4. Read the module that matches your current task.
+1. Read [MVP Scope](./mvp-scope.md).
+2. Run the local demo.
+3. Generate a starter project.
+4. Read the API integration contract.
+5. Add or adapt a resource module.
+6. Load AI rules when asking an AI agent to generate or review UI.
 
 ## Run The Demo
 
-Start the local server from the repository root:
+From the repository root:
 
 ```bash
 pnpm dev
@@ -37,118 +33,142 @@ Open:
 http://127.0.0.1:4173/apps/demo-vanilla/
 ```
 
-Do not open `apps/demo-vanilla/index.html` directly through `file://`. The demo imports modules from sibling packages, and those module imports are expected to run through the local server.
+Do not open `apps/demo-vanilla/index.html` through `file://`. The demo uses ES modules and package imports.
 
-For Chinese product/design discussion:
+The demo includes:
 
-1. Prefer `*-rules.zh.md`.
-2. Use `*-ai-rules.zh.md` when writing Chinese prompts for AI.
-3. Keep English AI rules in sync when the rule affects code generation.
+- User Management: hand-written list CRUD reference.
+- Import Records: import workflow reference.
+- Project Settings: detail page reference.
+- Resource CRUD: generic resource page driven by resource metadata.
 
-For AI code generation:
+## Generate A Starter Project
 
-1. Start with [all-ai-rules.md](../component-rules/_ai-bundles/all-ai-rules.md).
-2. Pick one scenario bundle from [AI Rule Bundles](../component-rules/_ai-bundles/README.md).
-3. Add specific module AI rules only when the task needs them.
-4. Use human-readable rules for review, edge cases, and product decisions.
+Create a generic console starter:
 
-## Reading Paths
+```bash
+node scripts/create-blueprint.mjs my-console --template vanilla --with-demo
+```
 
-### Build A List CRUD Page
+Create a smaller starter with selected modules:
 
-Load these first:
+```bash
+node scripts/create-blueprint.mjs ops-console \
+  --modules activities,imports \
+  --app-name "Ops Console" \
+  --locale zh \
+  --theme system \
+  --density compact \
+  --api-base-url https://api.example.com
+```
 
-- [List CRUD AI Bundle](../component-rules/_ai-bundles/list-crud-ai-bundle.md)
-- [List Page AI Rules](../component-rules/list-page/list-page-ai-rules.md)
-- [FilterBar AI Rules](../component-rules/filter-bar/filter-bar-ai-rules.md)
-- [Table AI Rules](../component-rules/table/table-ai-rules.md)
-- [Action System AI Rules](../component-rules/action-system/action-system-ai-rules.md)
+Run the generated project:
 
-Use these human-readable references when refining:
+```bash
+cd ops-console
+pnpm build
+pnpm dev
+```
 
-- [List Page Rules](../component-rules/list-page/list-page-rules.md)
-- [FilterBar Rules](../component-rules/filter-bar/filter-bar-rules.md)
-- [Table Rules](../component-rules/table/table-rules.md)
+Generated projects read runtime options from `blueprint.config.js`.
 
-### Build A Form In Dialog Or Detail Page
+## Configure Runtime Options
 
-Load these first:
+The scaffold writes:
 
-- [Form Overlay AI Bundle](../component-rules/_ai-bundles/form-overlay-ai-bundle.md)
-- [Form AI Rules](../component-rules/form/form-ai-rules.md)
-- [Dialog AI Rules](../component-rules/dialog/dialog-ai-rules.md)
-- [Drawer / Side Panel AI Rules](../component-rules/drawer-side-panel/drawer-side-panel-ai-rules.md)
-- [Detail Page AI Rules](../component-rules/detail-page/detail-page-ai-rules.md)
+```js
+export default {
+  appName: "Ops Console",
+  apiBaseUrl: "https://api.example.com",
+  defaultLocale: "zh",
+  defaultTheme: "system",
+  density: "compact",
+  enabledModules: ["activities", "imports"]
+};
+```
 
-Use these human-readable references when refining:
+Use this file as the first integration point for app identity, backend URL, theme, locale, density, and enabled modules.
 
-- [Form Rules](../component-rules/form/form-rules.md)
-- [Dialog Rules](../component-rules/dialog/dialog-rules.md)
-- [Detail Page Rules](../component-rules/detail-page/detail-page-rules.md)
+## Connect A Backend API
 
-### Build Feedback And State Handling
+Read:
 
-Load these first:
+- [API Integration Contract](./api-integration.md)
+- [API 接入契约](./api-integration.zh.md)
 
-- [Data Feedback AI Bundle](../component-rules/_ai-bundles/data-feedback-ai-bundle.md)
-- [StateView AI Rules](../component-rules/state-view/state-view-ai-rules.md)
-- [Feedback / Toast AI Rules](../component-rules/feedback-toast/feedback-toast-ai-rules.md)
-- [StatusBadge / Tag AI Rules](../component-rules/status-badge/status-badge-ai-rules.md)
-- [Timeline / Activity Log AI Rules](../component-rules/timeline-activity-log/timeline-activity-log-ai-rules.md)
+The expected pattern is:
 
-### Build Upload Or Import Workflow
+```js
+import { createHttpClient } from "../packages/request/src/index.js";
+import config from "../blueprint.config.js";
 
-Load these first:
+const client = createHttpClient({
+  baseUrl: config.apiBaseUrl,
+  getToken: () => localStorage.getItem("access_token")
+});
+```
 
-- [Import Workflow AI Bundle](../component-rules/_ai-bundles/import-workflow-ai-bundle.md)
-- [Upload / Import Workflow AI Rules](../component-rules/upload-import-workflow/upload-import-workflow-ai-rules.md)
-- [Wizard / Stepper AI Rules](../component-rules/wizard-stepper/wizard-stepper-ai-rules.md)
-- [StateView AI Rules](../component-rules/state-view/state-view-ai-rules.md)
-- [Timeline / Activity Log AI Rules](../component-rules/timeline-activity-log/timeline-activity-log-ai-rules.md)
+Resource modules should receive an API object instead of creating global clients internally.
 
-## How To Use With AI
+## Add A Resource Module
 
-Use this pattern when asking AI to generate code:
+Read:
+
+- [Add Resource Module](./add-resource-module.md)
+- [新增资源模块](./add-resource-module.zh.md)
+
+Use the existing activity resource as the example:
 
 ```text
-You are generating a B2B console page.
+packages/data/src/activities.js
+```
+
+The resource pattern covers:
+
+- filters
+- table columns
+- form schema
+- CRUD API
+- import contract
+- row actions
+
+## Use With AI
+
+For AI page generation, start with:
+
+- [All AI Rules Entry](../component-rules/_ai-bundles/all-ai-rules.md)
+- [Core Foundation](../component-rules/_ai-bundles/core-foundation-ai-bundle.md)
+- The scenario bundle that matches the task, such as [List CRUD](../component-rules/_ai-bundles/list-crud-ai-bundle.md)
+
+Prompt pattern:
+
+```text
+Generate a B2B console resource page.
 
 Follow:
 - component-rules/_ai-bundles/core-foundation-ai-bundle.md
 - component-rules/_ai-bundles/list-crud-ai-bundle.md
-- component-rules/table/table-ai-rules.md
-- component-rules/filter-bar/filter-bar-ai-rules.md
+- docs/add-resource-module.md
+- docs/api-integration.md
 
-Task:
-Generate a user management list page with search, filters, table selection, row actions, batch actions, loading, empty, error, disabled, and permission states.
-
-Constraints:
-- Do not create a marketing landing page.
-- Use dense but readable console layout.
-- Keep action scope explicit.
-- Use ConfirmDialog for dangerous actions.
-- Protect mutation actions from duplicate clicks.
+Use the Resource Module Pattern.
+Keep actions scoped.
+Use ConfirmDialog for dangerous actions.
+Handle loading, empty, error, disabled, and permission states.
 ```
 
-Use this pattern when asking AI to review code:
+For AI review, ask for:
 
-```text
-Review this B2B console implementation against the loaded rules.
-
-Focus on:
-- interaction boundary mistakes
-- inconsistent action placement
-- missing loading/empty/error/disabled states
+- interaction boundary issues
+- missing states
 - unsafe dangerous actions
-- unclear permission behavior
-- responsive behavior that resets business state
+- unclear permissions
+- API contract mismatch
+- resource schema mismatch
 
-Return findings with file references and concrete fixes.
-```
+## Rule Maintenance
 
-## How To Extend The Rules
-
-Every component module should contain four files:
+Every component rule module should contain four files:
 
 ```text
 {module}-rules.md
@@ -157,27 +177,12 @@ Every component module should contain four files:
 {module}-ai-rules.zh.md
 ```
 
-When you add or change a rule:
+When changing rules:
 
-1. Update the human-readable version first.
-2. Update the matching AI version.
-3. Update the Chinese and English files.
-4. Update any affected bundle.
-5. Update the inventory if a new module is added.
+1. Update the human-readable file.
+2. Update the AI rule file.
+3. Keep Chinese and English in sync.
+4. Update affected AI bundles.
+5. Update the inventory for new modules.
 
-See [Rule Authoring Guide](./rule-authoring-guide.md) for details.
-
-## Current MVP Boundary
-
-This repository currently contains rules and documentation only.
-
-It does not yet include:
-
-- Runnable React components.
-- CLI installer.
-- Auth or RBAC implementation.
-- Test setup.
-- Browser compatibility configuration.
-- Demo application source code.
-
-Those belong to later phases in [ROADMAP.md](../ROADMAP.md).
+See [Rule Authoring Guide](./rule-authoring-guide.md).

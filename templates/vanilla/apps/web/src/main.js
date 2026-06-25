@@ -5,6 +5,7 @@ import {
   createSelectionController
 } from "../../../packages/headless/src/index.js";
 import {
+  activityResource,
   createUserRecord,
   deleteUserRecord,
   getUserRoleOptions,
@@ -13,8 +14,11 @@ import {
   resetUserPassword,
   updateUserRecord
 } from "../../../packages/data/src/index.js";
+import { defaultOperatorAuth } from "../../../packages/auth/src/index.js";
 import { attachThemeController } from "../../../packages/dom/src/index.js";
+import { readFormValues } from "../../../packages/form-schema/src/index.js";
 import { createI18n } from "../../../packages/i18n/src/index.js";
+import { createCrudController, createModuleRegistry } from "../../../packages/resource/src/index.js";
 import { createRuntimeConfig } from "../../../packages/runtime-config/src/index.js";
 import blueprintConfig from "../../../blueprint.config.js";
 
@@ -25,11 +29,11 @@ const i18n = createI18n({
 });
 const appName = config.appName;
 const brand = document.querySelector(".brand");
+const nav = document.querySelector(".nav");
+const content = document.querySelector(".content");
 const pageEyebrow = document.querySelector("#page-eyebrow");
 const pageTitle = document.querySelector("#page-title");
 const pageDescription = document.querySelector("#page-description");
-const pageLinks = document.querySelectorAll("[data-page-link]");
-const pagePanels = document.querySelectorAll("[data-page-panel]");
 const themeToggle = document.querySelector("#theme-toggle");
 const refreshButton = document.querySelector("#refresh-button");
 const createUserButton = document.querySelector("#create-user-button");
@@ -102,6 +106,8 @@ let currentPage = "users";
 let projectEditMode = false;
 let importStep = "upload";
 let importProgress = "idle";
+let resourceController = null;
+let resourceEditRecord = null;
 const pendingStatusUserIds = new Set();
 const projectSaveAction = createPendingAction();
 
@@ -118,23 +124,46 @@ const selection = createSelectionController({
 const saveUserAction = createPendingAction();
 const confirmAction = createPendingAction();
 
-const pageMeta = {
+const staticPageMeta = {
   users: {
+    key: "users",
+    navLabel: i18n.t("app.nav.users"),
     eyebrow: i18n.t("page.users.eyebrow"),
     title: i18n.t("page.users.title"),
     description: i18n.t("page.users.description")
   },
   imports: {
+    key: "imports",
+    navLabel: i18n.t("app.nav.imports"),
     eyebrow: i18n.t("page.imports.eyebrow"),
     title: i18n.t("page.imports.title"),
     description: i18n.t("page.imports.description")
   },
   projects: {
+    key: "projects",
+    navLabel: i18n.t("app.nav.projects"),
     eyebrow: i18n.t("page.projects.eyebrow"),
     title: i18n.t("page.projects.title"),
     description: i18n.t("page.projects.description")
   }
 };
+
+const moduleRegistry = createModuleRegistry([
+  staticPageMeta.users,
+  staticPageMeta.imports,
+  staticPageMeta.projects,
+  activityResource
+]);
+const enabledModules = moduleRegistry.enabled(config.enabledModules);
+const pageMeta = Object.fromEntries(enabledModules.map((module) => [
+  module.key,
+  {
+    eyebrow: module.resource ? "Resource module" : module.eyebrow,
+    title: module.label || module.title,
+    description: module.description,
+    module
+  }
+]));
 
 const project = {
   name: "Blueprint Console",
@@ -247,6 +276,7 @@ attachThemeController({
 
 document.title = appName;
 brand.textContent = appName;
+initializeModules();
 applyStaticText();
 seedSelect(roleFilter, getUserRoleOptions(), "All roles");
 seedSelect(statusFilter, getUserStatusOptions(), "All statuses");
@@ -256,6 +286,27 @@ bindEvents();
 renderPageActions();
 renderCurrentPage();
 loadUsers();
+
+function initializeModules() {
+  nav.innerHTML = enabledModules
+    .map((module, index) => `
+      <a
+        class="nav__item ${index === 0 ? "nav__item--active" : ""}"
+        href="#${escapeAttribute(module.key)}"
+        data-page-link="${escapeAttribute(module.key)}"
+      >${escapeHtml(module.navLabel || module.label || module.title)}</a>
+    `)
+    .join("");
+
+  if (config.enabledModules.includes("activities") && !document.querySelector('[data-page-panel="activities"]')) {
+    content.insertAdjacentHTML("beforeend", createResourcePageShell(activityResource));
+    resourceController = createCrudController({
+      resource: activityResource,
+      api: activityResource.api,
+      auth: defaultOperatorAuth
+    });
+  }
+}
 
 function bindEvents() {
   window.addEventListener("hashchange", renderCurrentPage);
@@ -371,6 +422,9 @@ function bindEvents() {
   });
 
   document.addEventListener("click", closeOpenMenus);
+  content.addEventListener("click", handleResourceClick);
+  content.addEventListener("change", handleResourceFilterChange);
+  content.addEventListener("submit", handleResourceSubmit);
 
   importWorkflowContent.addEventListener("click", handleImportWorkflowAction);
 
@@ -391,9 +445,9 @@ function bindEvents() {
 
 function applyStaticText() {
   root.lang = i18n.locale;
-  document.querySelector('[data-page-link="users"]').textContent = i18n.t("app.nav.users");
-  document.querySelector('[data-page-link="imports"]').textContent = i18n.t("app.nav.imports");
-  document.querySelector('[data-page-link="projects"]').textContent = i18n.t("app.nav.projects");
+  setText('[data-page-link="users"]', i18n.t("app.nav.users"));
+  setText('[data-page-link="imports"]', i18n.t("app.nav.imports"));
+  setText('[data-page-link="projects"]', i18n.t("app.nav.projects"));
   roleSwitchField.querySelector("span").textContent = i18n.t("app.role.label");
   refreshButton.textContent = i18n.t("app.actions.refresh");
   createUserButton.textContent = i18n.t("app.actions.createUser");
@@ -404,20 +458,26 @@ function applyStaticText() {
   clearSelection.textContent = i18n.t("app.actions.clearSelection");
 }
 
+function setText(selector, text) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = text;
+}
+
 function renderCurrentPage() {
   const requestedPage = window.location.hash.replace("#", "") || "users";
-  currentPage = pageMeta[requestedPage] ? requestedPage : "users";
+  const fallbackPage = enabledModules[0]?.key || "users";
+  currentPage = pageMeta[requestedPage] ? requestedPage : fallbackPage;
   const meta = pageMeta[currentPage];
 
   pageEyebrow.textContent = meta.eyebrow;
   pageTitle.textContent = meta.title;
   pageDescription.textContent = meta.description;
 
-  for (const link of pageLinks) {
+  for (const link of document.querySelectorAll("[data-page-link]")) {
     link.classList.toggle("nav__item--active", link.dataset.pageLink === currentPage);
   }
 
-  for (const panel of pagePanels) {
+  for (const panel of document.querySelectorAll("[data-page-panel]")) {
     panel.hidden = panel.dataset.pagePanel !== currentPage;
   }
 
@@ -437,6 +497,334 @@ function renderCurrentPage() {
     renderProjectSecurity();
     renderProjectActivity();
   }
+
+  if (currentPage === "activities") {
+    renderResourcePage();
+  }
+}
+
+function createResourcePageShell(resource) {
+  return `
+    <div class="page-panel" id="${escapeAttribute(resource.key)}-page" data-page-panel="${escapeAttribute(resource.key)}" hidden>
+      <section class="filter-bar" data-resource-filters="${escapeAttribute(resource.key)}">
+        ${resource.filters.map(renderResourceFilter).join("")}
+        <div class="filter-bar__actions">
+          <button class="button button--secondary" data-resource-reset type="button">重置</button>
+          <button class="button button--secondary" data-resource-refresh type="button">刷新</button>
+          <button class="button button--primary" data-resource-create type="button">新建</button>
+        </div>
+      </section>
+
+      <section class="table-shell" aria-live="polite">
+        <div class="table-status" data-resource-status hidden></div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                ${resource.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}
+                <th class="operation-cell">操作</th>
+              </tr>
+            </thead>
+            <tbody data-resource-body></tbody>
+          </table>
+        </div>
+        <div class="pagination" data-resource-pagination></div>
+      </section>
+
+      <section class="detail-shell" data-resource-form-shell hidden>
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Resource form</p>
+            <h2 data-resource-form-title>新建${escapeHtml(resource.label)}</h2>
+            <p>表单由资源 schema 渲染，保存前会执行通用校验。</p>
+          </div>
+        </div>
+        <form class="settings-grid" data-resource-form>
+          ${resource.form.fields.map(renderResourceFormField).join("")}
+          <div class="form-error field--wide" data-resource-form-error hidden></div>
+          <div class="form-actions field--wide">
+            <button class="button button--secondary" data-resource-cancel type="button">取消</button>
+            <button class="button button--primary" type="submit">保存</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function renderResourceFilter(field) {
+  if (field.type === "select") {
+    return `
+      <label class="field">
+        <span>${escapeHtml(field.label)}</span>
+        <select data-resource-filter="${escapeAttribute(field.name)}">
+          <option value="">全部</option>
+          ${(field.options || []).map((option) => `<option value="${escapeAttribute(option)}">${escapeHtml(option)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  return `
+    <label class="field">
+      <span>${escapeHtml(field.label)}</span>
+      <input data-resource-filter="${escapeAttribute(field.name)}" type="search" placeholder="请输入${escapeAttribute(field.label)}" />
+    </label>
+  `;
+}
+
+function renderResourceFormField(field) {
+  if (field.type === "select") {
+    return `
+      <label class="field">
+        <span>${escapeHtml(field.label)}${field.required ? " *" : ""}</span>
+        <select name="${escapeAttribute(field.name)}">
+          <option value="">请选择</option>
+          ${(field.options || []).map((option) => `<option value="${escapeAttribute(option)}">${escapeHtml(option)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
+
+  const inputType = field.type === "datetime" ? "datetime-local" : field.type || "text";
+  return `
+    <label class="field">
+      <span>${escapeHtml(field.label)}${field.required ? " *" : ""}</span>
+      <input name="${escapeAttribute(field.name)}" type="${escapeAttribute(inputType)}" />
+    </label>
+  `;
+}
+
+async function renderResourcePage() {
+  if (!resourceController) return;
+  const panel = document.querySelector('[data-page-panel="activities"]');
+  const body = panel.querySelector("[data-resource-body]");
+  const status = panel.querySelector("[data-resource-status]");
+
+  body.innerHTML = renderResourceLoadingRows(activityResource);
+  status.hidden = false;
+  status.className = "table-status table-status--muted";
+  status.textContent = "正在加载数据...";
+
+  const state = await resourceController.load();
+
+  if (state.error) {
+    status.className = "table-status table-status--error";
+    status.textContent = state.error.message || "加载失败。";
+    body.innerHTML = renderResourceStateRow(activityResource, "加载失败，请稍后重试。");
+    renderResourcePagination(state);
+    return;
+  }
+
+  if (state.rows.length === 0) {
+    status.className = "table-status table-status--empty";
+    status.textContent = "暂无数据。";
+    body.innerHTML = renderResourceStateRow(activityResource, "暂无数据，请新建或调整筛选条件。");
+  } else {
+    status.hidden = true;
+    body.innerHTML = state.rows.map((record) => renderResourceRow(activityResource, record)).join("");
+  }
+
+  renderResourcePagination(state);
+}
+
+function renderResourceLoadingRows(resource) {
+  return Array.from({ length: 3 }, () => `
+    <tr class="skeleton-row">
+      ${resource.columns.map(() => '<td><span class="skeleton-box"></span></td>').join("")}
+      <td><span class="skeleton-box"></span></td>
+    </tr>
+  `).join("");
+}
+
+function renderResourceStateRow(resource, message) {
+  return `
+    <tr>
+      <td class="state-cell" colspan="${resource.columns.length + 1}">
+        <strong>${escapeHtml(message)}</strong>
+      </td>
+    </tr>
+  `;
+}
+
+function renderResourceRow(resource, record) {
+  return `
+    <tr>
+      ${resource.columns.map((column) => `<td>${escapeHtml(formatResourceValue(record[column.key], column))}</td>`).join("")}
+      <td class="operation-cell">
+        <button class="icon-action" data-resource-edit="${escapeAttribute(record.id)}" type="button">编辑</button>
+        <button class="icon-action" data-resource-delete="${escapeAttribute(record.id)}" type="button">删除</button>
+      </td>
+    </tr>
+  `;
+}
+
+function renderResourcePagination(state) {
+  const panel = document.querySelector('[data-page-panel="activities"]');
+  const paginationEl = panel.querySelector("[data-resource-pagination]");
+  const paginationState = state.query.pagination;
+
+  paginationEl.innerHTML = `
+    <span>第 ${paginationState.pageNum} / ${paginationState.pageCount} 页</span>
+    <span>${paginationState.total} 条</span>
+    <button class="button button--secondary" data-resource-prev type="button" ${paginationState.pageNum <= 1 ? "disabled" : ""}>上一页</button>
+    <button class="button button--secondary" data-resource-next type="button" ${paginationState.pageNum >= paginationState.pageCount ? "disabled" : ""}>下一页</button>
+  `;
+}
+
+function formatResourceValue(value, column) {
+  if (!value) return "-";
+  if (column.key.endsWith("At")) return formatDate(value);
+  return value;
+}
+
+function handleResourceClick(event) {
+  if (currentPage !== "activities" || !resourceController) return;
+  const target = event.target.closest("button");
+  if (!target) return;
+
+  if (target.matches("[data-resource-refresh]")) {
+    renderResourcePage();
+  }
+
+  if (target.matches("[data-resource-reset]")) {
+    resetResourceFilters();
+  }
+
+  if (target.matches("[data-resource-create]")) {
+    openResourceForm();
+  }
+
+  if (target.matches("[data-resource-cancel]")) {
+    closeResourceForm();
+  }
+
+  if (target.matches("[data-resource-prev]")) {
+    resourceController.query.pagination.setPage(resourceController.getState().query.pagination.pageNum - 1);
+    renderResourcePage();
+  }
+
+  if (target.matches("[data-resource-next]")) {
+    resourceController.query.pagination.setPage(resourceController.getState().query.pagination.pageNum + 1);
+    renderResourcePage();
+  }
+
+  if (target.dataset.resourceEdit) {
+    const record = getResourceRecord(target.dataset.resourceEdit);
+    if (record) openResourceForm(record);
+  }
+
+  if (target.dataset.resourceDelete) {
+    const record = getResourceRecord(target.dataset.resourceDelete);
+    if (record) openConfirmDialog(createResourceDeleteConfirm(record));
+  }
+}
+
+function handleResourceFilterChange(event) {
+  if (currentPage !== "activities" || !resourceController) return;
+  const field = event.target.closest("[data-resource-filter]");
+  if (!field) return;
+
+  resourceController.query.filters.setFilter(field.dataset.resourceFilter, field.value);
+  renderResourcePage();
+}
+
+function handleResourceSubmit(event) {
+  if (currentPage !== "activities" || !event.target.matches("[data-resource-form]")) return;
+  event.preventDefault();
+  saveResourceForm(event.target);
+}
+
+function resetResourceFilters() {
+  const panel = document.querySelector('[data-page-panel="activities"]');
+  for (const field of panel.querySelectorAll("[data-resource-filter]")) {
+    field.value = "";
+  }
+
+  resourceController.query.filters.reset();
+  renderResourcePage();
+}
+
+function openResourceForm(record = null) {
+  resourceEditRecord = record;
+  const panel = document.querySelector('[data-page-panel="activities"]');
+  const shell = panel.querySelector("[data-resource-form-shell]");
+  const form = panel.querySelector("[data-resource-form]");
+  const title = panel.querySelector("[data-resource-form-title]");
+  const values = activityResource.form.getInitialValues(record || {});
+
+  title.textContent = record ? `编辑${activityResource.label}` : `新建${activityResource.label}`;
+  shell.hidden = false;
+  panel.querySelector("[data-resource-form-error]").hidden = true;
+
+  for (const field of activityResource.form.fields) {
+    const input = form.elements[field.name];
+    if (!input) continue;
+    input.value = toInputValue(values[field.name], field);
+  }
+
+  form.querySelector("input, select, textarea")?.focus();
+}
+
+function closeResourceForm() {
+  const panel = document.querySelector('[data-page-panel="activities"]');
+  panel.querySelector("[data-resource-form-shell]").hidden = true;
+  resourceEditRecord = null;
+}
+
+async function saveResourceForm(form) {
+  const values = readFormValues(form, activityResource.form.fields);
+  const validation = activityResource.form.validate(values);
+  const error = form.querySelector("[data-resource-form-error]");
+
+  if (!validation.valid) {
+    error.hidden = false;
+    error.textContent = Object.values(validation.errors)[0];
+    return;
+  }
+
+  error.hidden = true;
+  await resourceController.save({
+    ...resourceEditRecord,
+    ...normalizeResourceFormValues(values)
+  });
+  closeResourceForm();
+  await renderResourcePage();
+}
+
+function createResourceDeleteConfirm(record) {
+  return {
+    tone: "danger",
+    eyebrow: "Dangerous action",
+    title: `删除 ${record.title}?`,
+    description: "该记录删除后不可恢复，请确认当前操作对象无误。",
+    subject: `${record.title} · ${record.channel}`,
+    submitLabel: "删除",
+    action: async () => {
+      await resourceController.delete(record);
+      await renderResourcePage();
+      return "记录已删除。";
+    }
+  };
+}
+
+function getResourceRecord(id) {
+  return resourceController.getState().rows.find((record) => record.id === id);
+}
+
+function normalizeResourceFormValues(values) {
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => {
+    if (key.endsWith("At") && value) {
+      return [key, new Date(value).toISOString()];
+    }
+    return [key, value];
+  }));
+}
+
+function toInputValue(value, field) {
+  if (!value) return "";
+  if (field.type === "datetime") return String(value).slice(0, 16);
+  return value;
 }
 
 async function loadUsers() {

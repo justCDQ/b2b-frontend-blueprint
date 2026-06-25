@@ -28,6 +28,11 @@ Do not open `apps/web/index.html` through `file://`; the app uses ES modules and
 - `packages/theme`: design tokens and theme CSS.
 - `packages/runtime-config`: normalized app runtime configuration.
 - `packages/i18n`: lightweight dictionaries, translation, and date formatting.
+- `packages/request`: API adapter, mock client, and request error normalization.
+- `packages/auth`: minimal current-user and permission skeleton.
+- `packages/form-schema`: framework-free field schema and validation.
+- `packages/import-workflow`: reusable import workflow contract.
+- `packages/resource`: resource modules, module registry, and CRUD controller.
 - `packages/headless`: framework-free interaction controllers.
 - `packages/data`: mock API contracts and fixtures.
 - `packages/dom`: DOM adapters.

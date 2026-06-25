@@ -4,7 +4,7 @@ export default {
   defaultLocale: "zh",
   defaultTheme: "system",
   density: "comfortable",
-  enabledModules: ["users", "imports", "projects"],
+  enabledModules: ["users", "imports", "projects", "activities"],
   locales: ["zh", "en"],
   themeModes: ["light", "dark"]
 };

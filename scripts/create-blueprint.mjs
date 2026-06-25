@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const supportedTemplates = ["vanilla"];
+const supportedModules = ["users", "imports", "projects", "activities"];
+const defaultDemoModules = ["users", "imports", "projects"];
 
 const args = process.argv.slice(2);
 const options = parseArgs(args);
@@ -22,7 +24,7 @@ if (!supportedTemplates.includes(options.template)) {
 
 const targetRoot = resolve(process.cwd(), options.target);
 const projectName = toPackageName(basename(targetRoot));
-const projectTitle = toTitle(projectName);
+const projectTitle = options.appName || toTitle(projectName);
 
 if (!existsSync(templateRoot)) {
   console.error(`Template not found: ${options.template}`);
@@ -61,19 +63,29 @@ replacePlaceholders(targetRoot, {
   projectTitle
 });
 writeBlueprintConfig(targetRoot, {
+  apiBaseUrl: options.apiBaseUrl,
+  density: options.density,
+  locale: options.locale,
   projectTitle,
+  theme: options.theme,
   template: options.template,
+  modules: options.modules,
   withDemo: options.withDemo
 });
 writeProjectReadme(targetRoot, {
+  apiBaseUrl: options.apiBaseUrl,
+  density: options.density,
+  locale: options.locale,
   projectTitle,
+  theme: options.theme,
+  modules: options.modules,
   withDemo: options.withDemo
 });
 
 console.log(`Created ${projectTitle} at ${targetRoot}`);
 console.log("");
 console.log(`Template: ${options.template}`);
-console.log(`Demo modules: ${options.withDemo ? "included" : "removed"}`);
+console.log(`Modules: ${options.modules.length > 0 ? options.modules.join(", ") : "none"}`);
 console.log("");
 console.log("Next steps:");
 console.log(`  cd ${options.target}`);
@@ -92,6 +104,12 @@ function printHelp() {
   console.log("  --template vanilla    Template name. Currently only vanilla is supported.");
   console.log("  --with-demo           Include demo modules. Default.");
   console.log("  --without-demo        Generate the app shell without demo modules.");
+  console.log("  --modules <list>      Comma-separated modules. Supported: users, imports, projects, activities.");
+  console.log("  --app-name <name>     App display name written to blueprint.config.js.");
+  console.log("  --locale <zh|en>      Default locale.");
+  console.log("  --theme <system|light|dark>");
+  console.log("  --density <comfortable|compact>");
+  console.log("  --api-base-url <url>  Backend API base URL.");
   console.log("  --force               Overwrite target files.");
   console.log("  --dry-run             Preview planned output without writing files.");
 }
@@ -99,9 +117,16 @@ function printHelp() {
 function parseArgs(values) {
   const parsed = {
     dryRun: false,
+    apiBaseUrl: "",
+    appName: "",
+    density: "comfortable",
     force: false,
+    locale: "zh",
     target: "",
     template: "vanilla",
+    theme: "system",
+    modules: [...defaultDemoModules],
+    modulesFlag: false,
     withDemo: true,
     withDemoFlag: false,
     withoutDemoFlag: false
@@ -122,13 +147,53 @@ function parseArgs(values) {
 
     if (value === "--with-demo") {
       parsed.withDemo = true;
+      if (!parsed.modulesFlag) parsed.modules = [...defaultDemoModules];
       parsed.withDemoFlag = true;
       continue;
     }
 
     if (value === "--without-demo") {
       parsed.withDemo = false;
+      if (!parsed.modulesFlag) parsed.modules = [];
       parsed.withoutDemoFlag = true;
+      continue;
+    }
+
+    if (value === "--modules") {
+      parsed.modules = parseModules(readOptionValue(values, index, "--modules"));
+      parsed.modulesFlag = true;
+      parsed.withDemo = parsed.modules.length > 0;
+      index += 1;
+      continue;
+    }
+
+    if (value === "--app-name") {
+      parsed.appName = readOptionValue(values, index, "--app-name");
+      index += 1;
+      continue;
+    }
+
+    if (value === "--locale") {
+      parsed.locale = readChoice(readOptionValue(values, index, "--locale"), ["zh", "en"], "--locale");
+      index += 1;
+      continue;
+    }
+
+    if (value === "--theme") {
+      parsed.theme = readChoice(readOptionValue(values, index, "--theme"), ["system", "light", "dark"], "--theme");
+      index += 1;
+      continue;
+    }
+
+    if (value === "--density") {
+      parsed.density = readChoice(readOptionValue(values, index, "--density"), ["comfortable", "compact"], "--density");
+      index += 1;
+      continue;
+    }
+
+    if (value === "--api-base-url") {
+      parsed.apiBaseUrl = readOptionValue(values, index, "--api-base-url");
+      index += 1;
       continue;
     }
 
@@ -161,11 +226,33 @@ function parseArgs(values) {
   return parsed;
 }
 
+function parseModules(value) {
+  const modules = value.split(",").map((item) => item.trim()).filter(Boolean);
+  const unsupported = modules.filter((module) => !supportedModules.includes(module));
+
+  if (unsupported.length > 0) {
+    console.error(`Unsupported modules: ${unsupported.join(", ")}`);
+    console.error(`Supported modules: ${supportedModules.join(", ")}`);
+    process.exit(1);
+  }
+
+  return Array.from(new Set(modules));
+}
+
 function readOptionValue(values, index, optionName) {
   const value = values[index + 1];
 
   if (!value || value.startsWith("--")) {
     console.error(`${optionName} requires a value.`);
+    process.exit(1);
+  }
+
+  return value;
+}
+
+function readChoice(value, choices, optionName) {
+  if (!choices.includes(value)) {
+    console.error(`${optionName} must be one of: ${choices.join(", ")}.`);
     process.exit(1);
   }
 
@@ -181,7 +268,11 @@ function printDryRun({ targetRoot, projectTitle, templateRoot, options }) {
   console.log(`Target: ${targetRoot}`);
   console.log(`Project title: ${projectTitle}`);
   console.log(`Template: ${options.template}`);
-  console.log(`Demo modules: ${options.withDemo ? "included" : "removed"}`);
+  console.log(`Modules: ${options.modules.length > 0 ? options.modules.join(", ") : "none"}`);
+  console.log(`Locale: ${options.locale}`);
+  console.log(`Theme: ${options.theme}`);
+  console.log(`Density: ${options.density}`);
+  console.log(`API base URL: ${options.apiBaseUrl || "(empty)"}`);
   console.log(`Template files: ${fileCount}`);
   console.log("");
   console.log("Planned output:");
@@ -227,15 +318,16 @@ function countFiles(directory) {
 }
 
 function writeBlueprintConfig(targetRoot, options) {
+  const modules = options.withDemo ? options.modules : [];
   const config = `export default {
   appName: ${JSON.stringify(options.projectTitle)},
-  apiBaseUrl: "",
-  defaultLocale: "zh",
-  defaultTheme: "system",
-  density: "comfortable",
-  enabledModules: ${JSON.stringify(options.withDemo ? ["users", "imports", "projects"] : [])},
+  apiBaseUrl: ${JSON.stringify(options.apiBaseUrl)},
+  defaultLocale: ${JSON.stringify(options.locale)},
+  defaultTheme: ${JSON.stringify(options.theme)},
+  density: ${JSON.stringify(options.density)},
+  enabledModules: ${JSON.stringify(modules)},
   template: ${JSON.stringify(options.template)},
-  demoModules: ${JSON.stringify(options.withDemo ? ["users", "imports", "projects"] : [])},
+  demoModules: ${JSON.stringify(modules)},
   themeModes: ["light", "dark"],
   locales: ["zh", "en"]
 };
@@ -245,13 +337,11 @@ function writeBlueprintConfig(targetRoot, options) {
 }
 
 function writeProjectReadme(targetRoot, options) {
+  const moduleLines = options.modules.map((module) => `- ${toModuleLabel(module)}`).join("\n");
   const demoSection = options.withDemo
     ? `## Included Demo Modules
 
-- User Management
-- Import Records
-- Project Settings Detail
-- Activity Log
+${moduleLines}
 `
     : `## App Shell
 
@@ -270,6 +360,8 @@ Add feature modules under \`apps/web/src\` and keep reusable behavior in \`packa
 
 Framework-agnostic B2B console starter generated from B2B Frontend Blueprint.
 
+This project is a starter, not a locked framework. Read the code, replace the mock APIs, and keep the resource contracts explicit.
+
 ## Run
 
 \`\`\`bash
@@ -286,19 +378,94 @@ Do not open \`apps/web/index.html\` through \`file://\`; the app uses ES modules
 
 ${demoSection}
 
-## Configuration
+## Runtime Configuration
 
-Project metadata lives in:
+Project metadata and runtime options live in:
 
 \`\`\`text
 blueprint.config.js
 \`\`\`
+
+Important fields:
+
+\`\`\`js
+export default {
+  appName: ${JSON.stringify(options.projectTitle)},
+  apiBaseUrl: ${JSON.stringify(options.apiBaseUrl || "")},
+  defaultLocale: ${JSON.stringify(options.locale)},
+  defaultTheme: ${JSON.stringify(options.theme)},
+  density: ${JSON.stringify(options.density)},
+  enabledModules: ${JSON.stringify(options.withDemo ? options.modules : [])}
+};
+\`\`\`
+
+Use this file to change app name, backend URL, locale, theme, density, and enabled modules.
+
+## Connect Real APIs
+
+Use \`packages/request\` as the only browser-side HTTP entry:
+
+\`\`\`js
+import { createHttpClient } from "./packages/request/src/index.js";
+import config from "./blueprint.config.js";
+
+export const client = createHttpClient({
+  baseUrl: config.apiBaseUrl,
+  getToken: () => localStorage.getItem("access_token")
+});
+\`\`\`
+
+Resource APIs should expose:
+
+\`\`\`js
+{
+  query(query),
+  create(input),
+  update(id, patch),
+  delete(id)
+}
+\`\`\`
+
+List responses should use:
+
+\`\`\`json
+{
+  "list": [],
+  "pageNum": 1,
+  "pageSize": 20,
+  "total": 0
+}
+\`\`\`
+
+## Add A Resource Module
+
+Start from:
+
+\`\`\`text
+packages/data/src/activities.js
+\`\`\`
+
+A resource module should define:
+
+- filters
+- table columns
+- form schema
+- CRUD API
+- optional import contract
+- row actions
+
+Then add the module key to \`enabledModules\` in \`blueprint.config.js\`.
 
 ## Packages
 
 - \`packages/theme\`: design tokens and theme CSS.
 - \`packages/runtime-config\`: normalized app runtime configuration.
 - \`packages/i18n\`: lightweight dictionaries, translation, and date formatting.
+- \`packages/request\`: API adapter, mock client, and request error normalization.
+- \`packages/auth\`: minimal current-user and permission skeleton.
+- \`packages/form-schema\`: framework-free field schema and validation.
+- \`packages/import-workflow\`: reusable import workflow contract.
+- \`packages/resource\`: resource modules, module registry, and CRUD controller.
 - \`packages/headless\`: framework-free interaction controllers.
 - \`packages/data\`: mock API contracts and fixtures.
 - \`packages/dom\`: DOM adapters.
@@ -311,9 +478,28 @@ pnpm build
 pnpm test
 pnpm check
 \`\`\`
+
+## AI Usage
+
+When asking an AI coding agent to extend this project, tell it to follow:
+
+- B2B interaction rules from the source blueprint.
+- Resource Module Pattern.
+- API Integration Contract.
+- ConfirmDialog for dangerous actions.
+- loading, empty, error, disabled, and permission states.
 `;
 
   writeFileSync(join(targetRoot, "README.md"), readme);
+}
+
+function toModuleLabel(module) {
+  return {
+    activities: "Resource CRUD Example",
+    imports: "Import Records",
+    projects: "Project Settings Detail",
+    users: "User Management"
+  }[module] || toTitle(module);
 }
 
 function stripDemoModules(targetRoot) {

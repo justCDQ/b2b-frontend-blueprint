@@ -1,154 +1,174 @@
 # 快速开始
 
-这个仓库是一个面向 2B 控制台前端的 rules-first blueprint，用来辅助 AI 生成更符合企业级后台产品习惯的前端代码。
+B2B Frontend Blueprint 用于帮助团队和 AI 编程工具生成更符合 2B 控制台习惯的前端界面，同时提供一个可复用的 starter 模板。
 
-它适合用来避免 AI 生成过于 2C、营销页化、组件边界不清、状态缺失、权限缺失的后台界面。
+适合这些场景：
 
-## 适合谁使用
+- 2B 管理后台。
+- SaaS 控制台。
+- 内部工具。
+- 数据运营平台。
+- AI 辅助页面生成和代码审查。
 
-适合以下场景：
+## 先做什么
 
-- 设计可复用的 2B 前端模板。
-- 构建管理后台、SaaS 控制台、内部工具、CRM/ERP、数据运营平台。
-- 为 AI 编程工具编写 prompt。
-- 审查 AI 生成的界面是否符合企业级交互规范。
-- 将组件经验沉淀成可复用的工程规则。
-
-## 先读什么
-
-快速了解仓库：
-
-1. 阅读 [README.md](../README.md)。
-2. 阅读 [component-rules/README.md](../component-rules/README.md)。
-3. 阅读 [component-rules/_inventory/rules-inventory.zh.md](../component-rules/_inventory/rules-inventory.zh.md)。
-4. 根据当前任务阅读对应组件模块。
+1. 阅读 [MVP 边界](./mvp-scope.zh.md)。
+2. 运行本地 demo。
+3. 生成一个 starter 项目。
+4. 阅读 API 接入契约。
+5. 新增或改造一个资源模块。
+6. 让 AI 生成或审查页面时加载对应 rules。
 
 ## 运行 Demo
 
-在仓库根目录启动本地服务：
+在仓库根目录执行：
 
 ```bash
 pnpm dev
 ```
 
-然后打开：
+打开：
 
 ```text
 http://127.0.0.1:4173/apps/demo-vanilla/
 ```
 
-不要直接用 `file://` 打开 `apps/demo-vanilla/index.html`。当前 demo 使用 ES modules，并从同仓库其他 package 中导入模块，需要通过本地服务 URL 才能正常执行脚本。
+不要直接通过 `file://` 打开 `apps/demo-vanilla/index.html`。当前 demo 使用 ES modules 和跨 package 导入，需要通过本地服务运行。
 
-中文讨论产品和交互时：
+Demo 包含：
 
-1. 优先阅读 `*-rules.zh.md`。
-2. 写中文 AI prompt 时使用 `*-ai-rules.zh.md`。
-3. 如果规则会影响代码生成，需要同步更新英文 AI rules。
+- User Management：手写列表 CRUD 参考。
+- Import Records：导入流程参考。
+- Project Settings：详情页参考。
+- Resource CRUD：由资源元数据驱动的通用资源页示例。
 
-AI 代码生成时：
+## 生成 Starter 项目
 
-1. 从 [all-ai-rules.zh.md](../component-rules/_ai-bundles/all-ai-rules.zh.md) 开始。
-2. 选择一个匹配场景的 bundle。
-3. 只在需要时追加具体组件的 AI rules。
-4. 遇到边界判断和产品讨论时，再回到人类可读规则。
+生成一个通用控制台 starter：
 
-## 阅读路径
+```bash
+node scripts/create-blueprint.mjs my-console --template vanilla --with-demo
+```
 
-### 生成列表 CRUD 页面
+生成一个只启用部分模块的 starter：
 
-优先加载：
+```bash
+node scripts/create-blueprint.mjs ops-console \
+  --modules activities,imports \
+  --app-name "运营后台" \
+  --locale zh \
+  --theme system \
+  --density compact \
+  --api-base-url https://api.example.com
+```
 
-- [List CRUD AI Bundle](../component-rules/_ai-bundles/list-crud-ai-bundle.md)
-- [List Page AI Rules](../component-rules/list-page/list-page-ai-rules.md)
-- [FilterBar AI Rules](../component-rules/filter-bar/filter-bar-ai-rules.md)
-- [Table AI Rules](../component-rules/table/table-ai-rules.md)
-- [Action System AI Rules](../component-rules/action-system/action-system-ai-rules.md)
+运行生成项目：
 
-细化时参考：
+```bash
+cd ops-console
+pnpm build
+pnpm dev
+```
 
-- [列表页规则](../component-rules/list-page/list-page-rules.zh.md)
-- [筛选栏规则](../component-rules/filter-bar/filter-bar-rules.zh.md)
-- [表格规则](../component-rules/table/table-rules.zh.md)
+生成项目会从 `blueprint.config.js` 读取运行时配置。
 
-### 生成弹窗或详情页表单
+## 配置运行时选项
 
-优先加载：
+scaffold 会写入：
 
-- [Form Overlay AI Bundle](../component-rules/_ai-bundles/form-overlay-ai-bundle.md)
-- [Form AI Rules](../component-rules/form/form-ai-rules.md)
-- [Dialog AI Rules](../component-rules/dialog/dialog-ai-rules.md)
-- [Drawer / Side Panel AI Rules](../component-rules/drawer-side-panel/drawer-side-panel-ai-rules.md)
-- [Detail Page AI Rules](../component-rules/detail-page/detail-page-ai-rules.md)
+```js
+export default {
+  appName: "运营后台",
+  apiBaseUrl: "https://api.example.com",
+  defaultLocale: "zh",
+  defaultTheme: "system",
+  density: "compact",
+  enabledModules: ["activities", "imports"]
+};
+```
 
-细化时参考：
+这个文件是 app 名称、后端地址、主题、语言、密度、启用模块的第一入口。
 
-- [表单规则](../component-rules/form/form-rules.zh.md)
-- [弹窗规则](../component-rules/dialog/dialog-rules.zh.md)
-- [详情页规则](../component-rules/detail-page/detail-page-rules.zh.md)
+## 接入真实后端
 
-### 生成反馈和状态处理
+阅读：
 
-优先加载：
+- [API 接入契约](./api-integration.zh.md)
+- [API Integration Contract](./api-integration.md)
 
-- [Data Feedback AI Bundle](../component-rules/_ai-bundles/data-feedback-ai-bundle.md)
-- [StateView AI Rules](../component-rules/state-view/state-view-ai-rules.md)
-- [Feedback / Toast AI Rules](../component-rules/feedback-toast/feedback-toast-ai-rules.md)
-- [StatusBadge / Tag AI Rules](../component-rules/status-badge/status-badge-ai-rules.md)
-- [Timeline / Activity Log AI Rules](../component-rules/timeline-activity-log/timeline-activity-log-ai-rules.md)
+推荐模式：
 
-### 生成上传或导入流程
+```js
+import { createHttpClient } from "../packages/request/src/index.js";
+import config from "../blueprint.config.js";
 
-优先加载：
+const client = createHttpClient({
+  baseUrl: config.apiBaseUrl,
+  getToken: () => localStorage.getItem("access_token")
+});
+```
 
-- [Import Workflow AI Bundle](../component-rules/_ai-bundles/import-workflow-ai-bundle.md)
-- [Upload / Import Workflow AI Rules](../component-rules/upload-import-workflow/upload-import-workflow-ai-rules.md)
-- [Wizard / Stepper AI Rules](../component-rules/wizard-stepper/wizard-stepper-ai-rules.md)
-- [StateView AI Rules](../component-rules/state-view/state-view-ai-rules.md)
-- [Timeline / Activity Log AI Rules](../component-rules/timeline-activity-log/timeline-activity-log-ai-rules.md)
+资源模块应该接收 API 对象，不要在模块内部直接创建全局 client。
 
-## 如何给 AI 使用
+## 新增资源模块
 
-生成代码时可以使用这个结构：
+阅读：
+
+- [新增资源模块](./add-resource-module.zh.md)
+- [Add Resource Module](./add-resource-module.md)
+
+可以参考已有活动资源：
 
 ```text
-你正在生成一个 2B 控制台页面。
+packages/data/src/activities.js
+```
 
-请遵循：
+Resource Pattern 覆盖：
+
+- filters
+- table columns
+- form schema
+- CRUD API
+- import contract
+- row actions
+
+## 给 AI 使用
+
+AI 生成页面时，先加载：
+
+- [AI 规则总入口](../component-rules/_ai-bundles/all-ai-rules.zh.md)
+- [Core Foundation](../component-rules/_ai-bundles/core-foundation-ai-bundle.md)
+- 匹配当前任务的场景 bundle，例如 [List CRUD](../component-rules/_ai-bundles/list-crud-ai-bundle.md)
+
+Prompt 可以这样写：
+
+```text
+生成一个 2B 控制台资源管理页面。
+
+遵循：
 - component-rules/_ai-bundles/core-foundation-ai-bundle.md
 - component-rules/_ai-bundles/list-crud-ai-bundle.md
-- component-rules/table/table-ai-rules.md
-- component-rules/filter-bar/filter-bar-ai-rules.md
+- docs/add-resource-module.zh.md
+- docs/api-integration.zh.md
 
-任务：
-生成一个用户管理列表页，包含搜索、筛选、表格选择、行操作、批量操作、loading、empty、error、disabled 和权限状态。
-
-约束：
-- 不要生成营销落地页。
-- 使用紧凑但清晰的控制台布局。
-- 操作作用域必须清晰。
-- 危险操作必须使用 ConfirmDialog。
-- mutation 操作必须防止重复点击。
+使用 Resource Module Pattern。
+操作作用域必须清晰。
+危险操作使用 ConfirmDialog。
+必须覆盖 loading、empty、error、disabled 和 permission 状态。
 ```
 
-审查代码时可以使用这个结构：
+AI 审查代码时，重点要求检查：
 
-```text
-请根据已加载的 2B rules 审查这个控制台页面实现。
+- 交互边界问题。
+- 状态缺失。
+- 危险操作不安全。
+- 权限行为不清晰。
+- API 契约不一致。
+- resource schema 不一致。
 
-重点检查：
-- 交互边界错误
-- 操作摆放不一致
-- loading/empty/error/disabled 状态缺失
-- 危险操作缺少确认
-- 权限行为不清晰
-- 响应式变化导致业务状态丢失
+## 维护规则
 
-请返回带文件引用和具体修复建议的问题清单。
-```
-
-## 如何扩展规则
-
-每个组件模块默认包含四个文件：
+每个组件规则模块默认包含四个文件：
 
 ```text
 {module}-rules.md
@@ -157,27 +177,12 @@ AI 代码生成时：
 {module}-ai-rules.zh.md
 ```
 
-新增或修改规则时：
+修改规则时：
 
 1. 先更新人类可读版本。
-2. 再更新 AI 版本。
-3. 同步更新中文和英文。
-4. 如果影响通用生成行为，更新对应 bundle。
+2. 再更新 AI 规则版本。
+3. 保持中文和英文同步。
+4. 更新受影响的 AI bundle。
 5. 新增模块时更新 inventory。
 
 详见 [规则写作指南](./rule-authoring-guide.zh.md)。
-
-## 当前 MVP 边界
-
-当前仓库只包含规则和文档。
-
-暂不包含：
-
-- 可运行的 React 组件。
-- CLI 安装器。
-- Auth 或 RBAC 实现。
-- 测试工程。
-- 浏览器兼容配置。
-- Demo 应用源码。
-
-这些内容会进入 [ROADMAP.md](../ROADMAP.md) 后续阶段。

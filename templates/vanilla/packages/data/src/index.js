@@ -1,4 +1,17 @@
 export {
+  activityFormSchema,
+  activityImportContract,
+  activityResource,
+  activityStatuses,
+  createActivityRecord,
+  deleteActivityRecord,
+  publishActivity,
+  queryActivities,
+  unpublishActivity,
+  updateActivityRecord
+} from "./activities.js";
+
+export {
   createUserRecord,
   deleteUserRecord,
   getDisabledReasons,

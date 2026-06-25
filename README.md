@@ -2,11 +2,11 @@
 
 AI-ready interaction rules and architecture guidelines for enterprise console UI development.
 
-This repository is an MVP rules library for building 2B / B2B console frontends with AI-assisted development. It focuses on interaction quality, component boundaries, responsive behavior, permissions, state handling, and reusable architecture.
+This repository is an MVP blueprint for building 2B / B2B console frontends with AI-assisted development. It includes interaction rules, AI rule bundles, a runnable vanilla demo, a scaffold script, and reusable starter packages.
 
 ## What This Is
 
-This project is currently a **rules blueprint**, not a component implementation.
+This project is a **rules-first blueprint plus runnable starter**, not a full admin framework.
 
 It provides:
 
@@ -15,17 +15,19 @@ It provides:
 - Scenario-based AI rule bundles.
 - Initial system architecture rules for reusable 2B console components.
 - A framework-agnostic vanilla demo for validating interaction rules.
+- A local scaffold script for generating starter projects.
+- Reusable runtime, request, auth, form, import, and resource packages.
 
 It is designed to help teams and coding agents generate more consistent 2B frontend code.
 
 ## What This Is Not Yet
 
-This MVP does not include:
+This MVP intentionally does not include:
 
 - React component source code.
 - Published CLI installer.
-- RBAC implementation.
-- Auth implementation.
+- Full RBAC platform.
+- Full login/register/account system.
 - E2E test project.
 
 Those belong to later phases.
@@ -63,14 +65,24 @@ Do not open `apps/demo-vanilla/index.html` directly with `file://`. The demo use
 │   └── ...
 ├── docs/
 │   ├── getting-started.md
+│   ├── mvp-scope.md
+│   ├── add-resource-module.md
+│   ├── api-integration.md
 │   └── rule-authoring-guide.md
 ├── examples/
 │   └── prompts/
 ├── packages/
+│   ├── auth/
 │   ├── data/
 │   ├── dom/
+│   ├── form-schema/
 │   ├── headless/
+│   ├── i18n/
+│   ├── import-workflow/
 │   ├── recipes/
+│   ├── request/
+│   ├── resource/
+│   ├── runtime-config/
 │   └── theme/
 ├── scripts/
 ├── templates/
@@ -88,12 +100,18 @@ Recommended entry points:
 
 - [Getting Started](./docs/getting-started.md): how to read and use the repository.
 - [快速开始](./docs/getting-started.zh.md): 中文使用入口。
+- [MVP Scope](./docs/mvp-scope.md): current product boundary and success criteria.
+- [MVP 边界](./docs/mvp-scope.zh.md): 当前产品边界和成功标准。
+- [Add Resource Module](./docs/add-resource-module.md): how to add a new business resource.
+- [新增资源模块](./docs/add-resource-module.zh.md): 如何新增业务资源模块。
 - [Rule Authoring Guide](./docs/rule-authoring-guide.md): how to add or update rules.
 - [规则写作指南](./docs/rule-authoring-guide.zh.md): 中文规则维护指南。
 - [Template Architecture](./docs/template-architecture.md): future monorepo and package architecture.
 - [模板架构蓝图](./docs/template-architecture.zh.md): 未来代码模板的工程结构。
 - [CLI Template Scaffold Design](./docs/cli-template-scaffold.md): planned CLI and reusable template design.
 - [CLI 模板脚手架设计](./docs/cli-template-scaffold.zh.md): CLI 与可复用模板设计。
+- [API Integration Contract](./docs/api-integration.md): request layer, resource API, and error protocol.
+- [API 接入契约](./docs/api-integration.zh.md): 请求层、资源 API 与错误协议。
 - [MVP Implementation Plan](./docs/mvp-implementation-plan.md): first runnable code MVP plan.
 - [MVP 实施计划](./docs/mvp-implementation-plan.zh.md): 第一版可运行代码 MVP 执行计划。
 - [Prompt Examples](./examples/prompts/README.md): prompt templates for AI coding tools.
@@ -213,6 +231,8 @@ For page demo blueprints:
 - [导入任务](./examples/pages/import-records.zh.md)
 - [Project Settings Detail](./examples/pages/settings-detail.md)
 - [项目设置详情](./examples/pages/settings-detail.zh.md)
+- [Activity Management](./examples/pages/activity-management.md)
+- [活动管理](./examples/pages/activity-management.zh.md)
 
 For the framework-agnostic demo skeleton:
 
@@ -226,6 +246,11 @@ The first runnable app is zero-dependency vanilla HTML/CSS/JavaScript:
 - `packages/theme`
 - `packages/runtime-config`
 - `packages/i18n`
+- `packages/request`
+- `packages/auth`
+- `packages/form-schema`
+- `packages/import-workflow`
+- `packages/resource`
 - `packages/headless`
 - `packages/dom`
 - `packages/recipes`
@@ -269,6 +294,12 @@ Supported scaffold options:
 --template vanilla    Template name. Currently only vanilla is supported.
 --with-demo           Include demo modules. Default.
 --without-demo        Generate the app shell without demo modules.
+--modules <list>      Comma-separated modules. Supported: users, imports, projects, activities.
+--app-name <name>     App display name written to blueprint.config.js.
+--locale <zh|en>      Default locale.
+--theme <system|light|dark>
+--density <comfortable|compact>
+--api-base-url <url>  Backend API base URL.
 --force               Overwrite target files.
 --dry-run             Preview planned output without writing files.
 ```

@@ -11,6 +11,25 @@ const targets = [
   {
     name: "blueprint-scaffold-without-demo",
     args: ["--template", "vanilla", "--without-demo"]
+  },
+  {
+    name: "blueprint-scaffold-activity-modules",
+    args: [
+      "--template",
+      "vanilla",
+      "--modules",
+      "activities,imports",
+      "--app-name",
+      "运营后台",
+      "--locale",
+      "zh",
+      "--theme",
+      "dark",
+      "--density",
+      "compact",
+      "--api-base-url",
+      "https://api.example.com"
+    ]
   }
 ];
 
@@ -19,7 +38,10 @@ for (const target of targets) {
   rmSync(targetRoot, { force: true, recursive: true });
 
   run(process.execPath, ["scripts/create-blueprint.mjs", targetRoot, "--force", ...target.args]);
-  assertGeneratedFiles(targetRoot, target.args.includes("--with-demo"));
+  assertGeneratedFiles(targetRoot, {
+    modules: getExpectedModules(target.args),
+    withDemo: !target.args.includes("--without-demo")
+  });
   run("pnpm", ["build"], targetRoot);
 }
 
@@ -62,6 +84,38 @@ runExpectFailure(process.execPath, [
 
 runExpectFailure(process.execPath, [
   "scripts/create-blueprint.mjs",
+  join(tmpdir(), "blueprint-invalid-modules"),
+  "--modules",
+  "activities,unknown",
+  "--force"
+]);
+
+runExpectFailure(process.execPath, [
+  "scripts/create-blueprint.mjs",
+  join(tmpdir(), "blueprint-invalid-locale"),
+  "--locale",
+  "fr",
+  "--force"
+]);
+
+runExpectFailure(process.execPath, [
+  "scripts/create-blueprint.mjs",
+  join(tmpdir(), "blueprint-invalid-theme"),
+  "--theme",
+  "purple",
+  "--force"
+]);
+
+runExpectFailure(process.execPath, [
+  "scripts/create-blueprint.mjs",
+  join(tmpdir(), "blueprint-invalid-density"),
+  "--density",
+  "tiny",
+  "--force"
+]);
+
+runExpectFailure(process.execPath, [
+  "scripts/create-blueprint.mjs",
   "--target",
   "--template",
   "vanilla"
@@ -81,7 +135,7 @@ runExpectFailure(process.execPath, [
 
 console.log("Scaffold smoke tests passed.");
 
-function assertGeneratedFiles(targetRoot, withDemo) {
+function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
   const config = readFileSync(join(targetRoot, "blueprint.config.js"), "utf8");
   const readme = readFileSync(join(targetRoot, "README.md"), "utf8");
   const main = readFileSync(join(targetRoot, "apps/web/src/main.js"), "utf8");
@@ -91,11 +145,23 @@ function assertGeneratedFiles(targetRoot, withDemo) {
   }
 
   if (!config.includes(`defaultLocale: "zh"`) || !config.includes(`defaultTheme: "system"`)) {
-    throw new Error("Generated config is missing runtime defaults.");
+    if (!config.includes(`defaultLocale: "zh"`) || !config.includes(`defaultTheme: "dark"`)) {
+      throw new Error("Generated config is missing runtime defaults.");
+    }
+  }
+
+  if (modules.includes("activities") && !config.includes(`apiBaseUrl: "https://api.example.com"`)) {
+    throw new Error("Generated config is missing API base URL.");
   }
 
   if (!config.includes("enabledModules")) {
     throw new Error("Generated config is missing module metadata.");
+  }
+
+  for (const module of modules) {
+    if (!config.includes(`"${module}"`)) {
+      throw new Error(`Generated config is missing module: ${module}.`);
+    }
   }
 
   if (!main.includes("blueprint.config.js")) {
@@ -109,6 +175,16 @@ function assertGeneratedFiles(targetRoot, withDemo) {
   if (!withDemo && !readme.includes("generated without demo modules")) {
     throw new Error("Generated without-demo README is missing app shell guidance.");
   }
+}
+
+function getExpectedModules(args) {
+  const moduleIndex = args.indexOf("--modules");
+  if (moduleIndex >= 0) {
+    return args[moduleIndex + 1].split(",").map((item) => item.trim()).filter(Boolean);
+  }
+
+  if (args.includes("--without-demo")) return [];
+  return ["users", "imports", "projects"];
 }
 
 function run(command, args, cwd = process.cwd()) {

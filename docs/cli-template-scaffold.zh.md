@@ -48,6 +48,9 @@ create-b2b-blueprint my-console
 node scripts/create-blueprint.mjs --target my-console --template vanilla
 node scripts/create-blueprint.mjs my-console --with-demo
 node scripts/create-blueprint.mjs my-console --without-demo
+node scripts/create-blueprint.mjs ops-console --modules activities,imports
+node scripts/create-blueprint.mjs ops-console --app-name "运营后台" --locale zh --theme system --density compact
+node scripts/create-blueprint.mjs ops-console --api-base-url https://api.example.com
 node scripts/create-blueprint.mjs my-console --force
 node scripts/create-blueprint.mjs my-console --dry-run
 ```
@@ -58,17 +61,20 @@ node scripts/create-blueprint.mjs my-console --dry-run
 pnpm test:scaffold
 ```
 
-未来正式 CLI 可以在本地 scaffold 稳定后继续增加框架模板、i18n 选择、主题预设和可选模块。
+未来正式 CLI 可以在本地 scaffold 稳定后继续增加框架模板和更细的模块安装能力。
 
 当前参数校验行为：
 
 - 不支持的 template 会失败，并列出当前支持的 template。
+- 不支持的 module 会失败，并列出当前支持的 module。
+- 不支持的 locale、theme、density 会失败，并提示可选值。
 - `--with-demo` 和 `--without-demo` 不能同时使用。
 - `--target` 和 `--template` 必须提供明确值。
 - 目标目录已存在时必须使用 `--force`。
 - `--dry-run` 只输出将要生成的内容，不写入文件。
 - `--dry-run` 可以预览已存在目录；真实生成仍然需要 `--force`。
 - 生成应用会读取 `blueprint.config.js` 中的项目元数据。
+- CLI runtime 参数会写入 app name、locale、theme、density、modules 和 API base URL。
 - 生成 README 会根据 `--with-demo` 或 `--without-demo` 输出不同内容。
 
 ## 模板层级
@@ -96,6 +102,11 @@ packages/
 ├── theme/
 ├── runtime-config/
 ├── i18n/
+├── request/
+├── auth/
+├── form-schema/
+├── import-workflow/
+├── resource/
 ├── headless/
 ├── data/
 └── dom/
@@ -122,6 +133,11 @@ my-console/
 │   ├── theme/
 │   ├── runtime-config/
 │   ├── i18n/
+│   ├── request/
+│   ├── auth/
+│   ├── form-schema/
+│   ├── import-workflow/
+│   ├── resource/
 │   ├── headless/
 │   ├── data/
 │   ├── dom/
