@@ -6,6 +6,8 @@ B2B products are usually dense, permission-sensitive, workflow-driven, and heavi
 
 This repository turns those interaction decisions into reusable rules, docs, packages, demos, and a small framework-agnostic starter.
 
+![B2B Frontend Blueprint demo preview](./docs/assets/demo-preview.png)
+
 ## What You Get
 
 - **AI-ready interaction rules** for common B2B components and page patterns.
