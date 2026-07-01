@@ -8,7 +8,25 @@
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
-    <div class="shell">
+    <section class="auth-gate" id="auth-gate" hidden>
+      <form class="auth-card" id="login-form">
+        <p class="eyebrow">Auth demo</p>
+        <h1>B2B Frontend Blueprint</h1>
+        <p>选择一个演示身份进入控制台，查看菜单过滤、按钮禁用和权限原因。</p>
+        <label class="field">
+          <span>登录身份</span>
+          <select id="login-role">
+            <option value="owner">Owner</option>
+            <option value="admin">Admin</option>
+            <option value="operator">Operator</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </label>
+        <button class="button button--primary" type="submit">进入控制台</button>
+      </form>
+    </section>
+
+    <div class="shell" id="app-shell" hidden>
       <aside class="sidebar">
         <div class="brand">B2B Blueprint</div>
         <nav class="nav" aria-label="Demo navigation">
@@ -26,6 +44,11 @@
             <p id="page-description">Manage organization members, roles, and access status.</p>
           </div>
           <div class="actions">
+            <div class="user-menu" id="user-menu">
+              <span class="user-menu__name" id="current-user-name">小明</span>
+              <span class="user-menu__role" id="current-user-role">owner</span>
+              <button class="button button--secondary" id="logout-button" type="button">退出登录</button>
+            </div>
             <label class="field field--inline">
               <span>Role</span>
               <select id="role-switch">

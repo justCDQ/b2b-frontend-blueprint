@@ -28,6 +28,7 @@ export function createResourceModule(definition) {
     navLabel: definition.navLabel || definition.label,
     description: definition.description || "",
     resource: definition.resource || definition.key,
+    requiredPermission: definition.requiredPermission,
     columns: definition.columns || [],
     filters: definition.filters || [],
     form: definition.form,

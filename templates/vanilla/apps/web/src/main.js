@@ -14,7 +14,12 @@ import {
   resetUserPassword,
   updateUserRecord
 } from "../../../packages/data/src/index.js";
-import { defaultOperatorAuth } from "../../../packages/auth/src/index.js";
+import {
+  createAuthSession,
+  createLocalStorageAuthStore,
+  createRequiredPermission,
+  filterModulesByPermission
+} from "../../../packages/auth/src/index.js";
 import { attachThemeController } from "../../../packages/dom/src/index.js";
 import { readFormValues } from "../../../packages/form-schema/src/index.js";
 import { createI18n } from "../../../packages/i18n/src/index.js";
@@ -27,7 +32,14 @@ const config = createRuntimeConfig(blueprintConfig);
 const i18n = createI18n({
   locale: config.defaultLocale
 });
+const authSession = createAuthSession({
+  storage: createLocalStorageAuthStore()
+});
 const appName = config.appName;
+const authGate = document.querySelector("#auth-gate");
+const appShell = document.querySelector("#app-shell");
+const loginForm = document.querySelector("#login-form");
+const loginRole = document.querySelector("#login-role");
 const brand = document.querySelector(".brand");
 const nav = document.querySelector(".nav");
 const content = document.querySelector(".content");
@@ -37,6 +49,9 @@ const pageDescription = document.querySelector("#page-description");
 const themeToggle = document.querySelector("#theme-toggle");
 const refreshButton = document.querySelector("#refresh-button");
 const createUserButton = document.querySelector("#create-user-button");
+const currentUserName = document.querySelector("#current-user-name");
+const currentUserRole = document.querySelector("#current-user-role");
+const logoutButton = document.querySelector("#logout-button");
 const roleSwitch = document.querySelector("#role-switch");
 const roleSwitchField = roleSwitch.closest(".field");
 const keywordInput = document.querySelector("#keyword-input");
@@ -97,7 +112,7 @@ const projectSecuritySettings = document.querySelector("#project-security-settin
 const archiveProject = document.querySelector("#archive-project");
 const projectActivity = document.querySelector("#project-activity");
 
-let currentRole = "owner";
+let currentRole = authSession.getState().role;
 let currentRows = [];
 let keywordTimer;
 let formMode = "create";
@@ -130,21 +145,24 @@ const staticPageMeta = {
     navLabel: i18n.t("app.nav.users"),
     eyebrow: i18n.t("page.users.eyebrow"),
     title: i18n.t("page.users.title"),
-    description: i18n.t("page.users.description")
+    description: i18n.t("page.users.description"),
+    requiredPermission: createRequiredPermission("users", "read")
   },
   imports: {
     key: "imports",
     navLabel: i18n.t("app.nav.imports"),
     eyebrow: i18n.t("page.imports.eyebrow"),
     title: i18n.t("page.imports.title"),
-    description: i18n.t("page.imports.description")
+    description: i18n.t("page.imports.description"),
+    requiredPermission: createRequiredPermission("import", "read")
   },
   projects: {
     key: "projects",
     navLabel: i18n.t("app.nav.projects"),
     eyebrow: i18n.t("page.projects.eyebrow"),
     title: i18n.t("page.projects.title"),
-    description: i18n.t("page.projects.description")
+    description: i18n.t("page.projects.description"),
+    requiredPermission: createRequiredPermission("projects", "read")
   }
 };
 
@@ -154,16 +172,8 @@ const moduleRegistry = createModuleRegistry([
   staticPageMeta.projects,
   activityResource
 ]);
-const enabledModules = moduleRegistry.enabled(config.enabledModules);
-const pageMeta = Object.fromEntries(enabledModules.map((module) => [
-  module.key,
-  {
-    eyebrow: module.resource ? "Resource module" : module.eyebrow,
-    title: module.label || module.title,
-    description: module.description,
-    module
-  }
-]));
+let enabledModules = [];
+let pageMeta = {};
 
 const project = {
   name: "Blueprint Console",
@@ -283,11 +293,21 @@ seedSelect(statusFilter, getUserStatusOptions(), "All statuses");
 seedSelect(userRoleField, getUserRoleOptions(), "Select role");
 seedSelect(userStatusField, getUserStatusOptions(), "Select status");
 bindEvents();
-renderPageActions();
-renderCurrentPage();
-loadUsers();
+renderAuthState();
 
 function initializeModules() {
+  const auth = getCurrentAuth();
+  enabledModules = filterModulesByPermission(moduleRegistry.enabled(config.enabledModules), auth);
+  pageMeta = Object.fromEntries(enabledModules.map((module) => [
+    module.key,
+    {
+      eyebrow: module.resource ? "Resource module" : module.eyebrow,
+      title: module.label || module.title,
+      description: module.description,
+      module
+    }
+  ]));
+
   nav.innerHTML = enabledModules
     .map((module, index) => `
       <a
@@ -300,16 +320,31 @@ function initializeModules() {
 
   if (config.enabledModules.includes("activities") && !document.querySelector('[data-page-panel="activities"]')) {
     content.insertAdjacentHTML("beforeend", createResourcePageShell(activityResource));
+  }
+
+  if (config.enabledModules.includes("activities")) {
     resourceController = createCrudController({
       resource: activityResource,
       api: activityResource.api,
-      auth: defaultOperatorAuth
+      auth
     });
   }
 }
 
 function bindEvents() {
   window.addEventListener("hashchange", renderCurrentPage);
+
+  loginForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    authSession.signIn(loginRole.value);
+    renderAuthState();
+  });
+
+  logoutButton.addEventListener("click", () => {
+    authSession.signOut();
+    selection.clear();
+    renderAuthState();
+  });
 
   refreshButton.addEventListener("click", () => loadUsers());
 
@@ -319,10 +354,10 @@ function bindEvents() {
   });
 
   roleSwitch.addEventListener("change", () => {
-    currentRole = roleSwitch.value;
+    authSession.switchRole(roleSwitch.value);
+    currentRole = authSession.getState().role;
     selection.clear();
-    renderPageActions();
-    loadUsers();
+    renderAuthState();
   });
 
   keywordInput.addEventListener("input", () => {
@@ -443,6 +478,29 @@ function bindEvents() {
   archiveProject.addEventListener("click", () => openConfirmDialog(createArchiveProjectConfirm()));
 }
 
+function renderAuthState() {
+  const state = authSession.getState();
+  currentRole = state.role;
+  loginRole.value = currentRole;
+  roleSwitch.value = currentRole;
+  authGate.hidden = state.authenticated;
+  appShell.hidden = !state.authenticated;
+
+  if (!state.authenticated) {
+    return;
+  }
+
+  currentUserName.textContent = state.profile.currentUser.name;
+  currentUserRole.textContent = currentRole;
+  initializeModules();
+  renderPageActions();
+  renderCurrentPage();
+
+  if (currentPage === "users") {
+    loadUsers();
+  }
+}
+
 function applyStaticText() {
   root.lang = i18n.locale;
   setText('[data-page-link="users"]', i18n.t("app.nav.users"));
@@ -465,9 +523,16 @@ function setText(selector, text) {
 
 function renderCurrentPage() {
   const requestedPage = window.location.hash.replace("#", "") || "users";
-  const fallbackPage = enabledModules[0]?.key || "users";
+  const fallbackPage = enabledModules[0]?.key || "";
   currentPage = pageMeta[requestedPage] ? requestedPage : fallbackPage;
   const meta = pageMeta[currentPage];
+
+  if (!meta) {
+    pageEyebrow.textContent = "Forbidden";
+    pageTitle.textContent = "没有可访问的模块";
+    pageDescription.textContent = "当前登录身份没有访问任何已启用模块的权限。请切换身份或联系管理员。";
+    return;
+  }
 
   pageEyebrow.textContent = meta.eyebrow;
   pageTitle.textContent = meta.title;
@@ -1042,13 +1107,16 @@ function renderSelection() {
   const selectedRows = getSelectedRows();
   const disableCount = selectedRows.filter((user) => user.permissions.canDisable).length;
   const deleteCount = selectedRows.filter((user) => user.permissions.canDelete).length;
+  const canExport = getCurrentAuth().can("export", "users");
 
   batchBar.hidden = state.selectedCount === 0;
   selectionSummary.textContent = `${state.selectedCount} selected`;
-  batchExport.disabled = state.selectedCount === 0;
+  batchExport.disabled = state.selectedCount === 0 || !canExport;
   batchDisable.disabled = disableCount === 0;
   batchDelete.disabled = deleteCount === 0;
-  batchExport.title = state.selectedCount > 0 ? `Export ${state.selectedCount} selected users` : "Select users to export.";
+  batchExport.title = canExport
+    ? state.selectedCount > 0 ? `Export ${state.selectedCount} selected users` : "Select users to export."
+    : getCurrentAuth().reason("export", "users");
   batchDisable.title = disableCount > 0 ? `Disable ${disableCount} selected users` : "No selected users can be disabled.";
   batchDelete.title = deleteCount > 0 ? `Delete ${deleteCount} selected users` : "No selected users can be deleted.";
   selectAll.checked = state.allSelected;
@@ -1085,7 +1153,7 @@ function setLoading(loading) {
 function renderPageActions() {
   const canCreate = canManageUsers();
   createUserButton.disabled = !canCreate;
-  createUserButton.title = canCreate ? "Create User" : "当前角色没有新建用户权限。";
+  createUserButton.title = canCreate ? "Create User" : getCurrentAuth().reason("create", "users");
 }
 
 function renderStatusBadge(status) {
@@ -1277,7 +1345,7 @@ function showFormError(message) {
 }
 
 function canManageUsers() {
-  return currentRole === "owner" || currentRole === "admin";
+  return getCurrentAuth().can("create", "users");
 }
 
 function openDetailDialog(user) {
@@ -1544,6 +1612,10 @@ function exportSelectedUsers() {
   const rows = getSelectedRows();
 
   if (rows.length === 0) return;
+  if (!getCurrentAuth().can("export", "users")) {
+    renderStatus(getCurrentAuth().reason("export", "users"), "error");
+    return;
+  }
 
   const csv = toCsv(rows, ["id", "name", "email", "role", "status", "team"]);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1561,6 +1633,10 @@ function exportSelectedUsers() {
 function getSelectedRows() {
   const selectedKeys = new Set(selection.getSelectedKeys());
   return currentRows.filter((user) => selectedKeys.has(user.id));
+}
+
+function getCurrentAuth() {
+  return authSession.getState().auth;
 }
 
 function formatBatchSubject(rows) {

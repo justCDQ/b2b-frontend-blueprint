@@ -3,7 +3,9 @@ export function createHttpClient({
   getToken,
   fetchImpl = globalThis.fetch,
   timeoutMs = 15000,
-  headers = {}
+  headers = {},
+  onUnauthorized,
+  onForbidden
 } = {}) {
   if (typeof fetchImpl !== "function") {
     throw new Error("createHttpClient requires a fetch implementation.");
@@ -15,10 +17,11 @@ export function createHttpClient({
     const token = await getToken?.();
     const method = options.method || "GET";
     const body = normalizeBody(options.body);
+    const { query, timeoutMs: _timeoutMs, ...fetchOptions } = options;
 
     try {
-      const response = await fetchImpl(resolveUrl(baseUrl, path), {
-        ...options,
+      const response = await fetchImpl(resolveUrl(baseUrl, path, query), {
+        ...fetchOptions,
         method,
         body,
         headers: {
@@ -31,7 +34,7 @@ export function createHttpClient({
         signal: options.signal || controller.signal
       });
 
-      return parseResponse(response);
+      return await parseResponse(response);
     } catch (error) {
       if (error.name === "AbortError") {
         throw createRequestError({
@@ -41,7 +44,17 @@ export function createHttpClient({
         });
       }
 
-      throw normalizeRequestError(error);
+      const normalizedError = normalizeRequestError(error);
+
+      if (normalizedError.status === 401) {
+        onUnauthorized?.(normalizedError);
+      }
+
+      if (normalizedError.status === 403) {
+        onForbidden?.(normalizedError);
+      }
+
+      throw normalizedError;
     } finally {
       clearTimeout(timeout);
     }
@@ -63,6 +76,44 @@ export function createHttpClient({
     },
     delete(path, options) {
       return request(path, { ...options, method: "DELETE" });
+    }
+  };
+}
+
+export function createResourceApi({
+  client,
+  endpoint,
+  idKey = "id",
+  adaptList = adaptPageResponse,
+  paths = {}
+}) {
+  if (!client) {
+    throw new Error("createResourceApi requires a client.");
+  }
+
+  if (!endpoint) {
+    throw new Error("createResourceApi requires an endpoint.");
+  }
+
+  const basePath = endpoint.replace(/\/$/, "");
+
+  return {
+    async query(query) {
+      const response = await client.get(paths.query || basePath, { query });
+      return adaptList(response);
+    },
+    create(input) {
+      return client.post(paths.create || basePath, input);
+    },
+    update(id, patch) {
+      return client.patch(paths.update?.(id) || `${basePath}/${encodeURIComponent(id)}`, patch);
+    },
+    delete(id) {
+      return client.delete(paths.delete?.(id) || `${basePath}/${encodeURIComponent(id)}`);
+    },
+    get(recordOrId) {
+      const id = typeof recordOrId === "object" ? recordOrId[idKey] : recordOrId;
+      return client.get(paths.get?.(id) || `${basePath}/${encodeURIComponent(id)}`);
     }
   };
 }
@@ -106,13 +157,21 @@ export function adaptPageResponse(response, {
   listKey = "list",
   totalKey = "total",
   pageNumKey = "pageNum",
-  pageSizeKey = "pageSize"
+  pageSizeKey = "pageSize",
+  rootKey = ""
 } = {}) {
+  const source = rootKey ? getPathValue(response, rootKey) : response;
+  const fallbackSource = source?.data || source;
+  const list = getPathValue(fallbackSource, listKey) ?? getPathValue(response, listKey) ?? [];
+  const total = getPathValue(fallbackSource, totalKey) ?? getPathValue(response, totalKey) ?? list.length;
+  const pageNum = getPathValue(fallbackSource, pageNumKey) ?? getPathValue(response, pageNumKey) ?? 1;
+  const pageSize = getPathValue(fallbackSource, pageSizeKey) ?? getPathValue(response, pageSizeKey) ?? (list.length || 20);
+
   return {
-    list: response[listKey] || [],
-    pageNum: response[pageNumKey] || 1,
-    pageSize: response[pageSizeKey] || 20,
-    total: response[totalKey] || 0
+    list,
+    pageNum,
+    pageSize,
+    total
   };
 }
 
@@ -157,7 +216,35 @@ function normalizeRequestError(error) {
   });
 }
 
-function resolveUrl(baseUrl, path) {
-  if (/^https?:\/\//.test(path)) return path;
-  return `${baseUrl.replace(/\/$/, "")}/${String(path).replace(/^\//, "")}`;
+function getPathValue(source, path) {
+  if (!path) return source;
+  return String(path).split(".").reduce((value, key) => {
+    if (value === undefined || value === null) return undefined;
+    return value[key];
+  }, source);
+}
+
+function resolveUrl(baseUrl, path, query) {
+  const isAbsolute = /^https?:\/\//.test(path);
+  const hasBase = Boolean(baseUrl);
+  const url = isAbsolute
+    ? new URL(path)
+    : new URL(
+      hasBase ? `${baseUrl.replace(/\/$/, "")}/${String(path).replace(/^\//, "")}` : String(path).replace(/^\//, ""),
+      "http://blueprint.local"
+    );
+
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, value);
+      }
+    }
+  }
+
+  if (!isAbsolute && !hasBase) {
+    return `${url.pathname}${url.search}`;
+  }
+
+  return url.toString();
 }

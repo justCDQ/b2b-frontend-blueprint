@@ -47,6 +47,35 @@ export const activityApi = {
 
 Use this object as the only dependency passed into a resource module or CRUD controller. This keeps business pages testable and replaceable.
 
+For standard CRUD endpoints, generate this object with `createResourceApi`:
+
+```js
+import { adaptPageResponse, createResourceApi } from "../packages/request/src/index.js";
+
+export const activityApi = createResourceApi({
+  client,
+  endpoint: "/activities",
+  adaptList: (response) => adaptPageResponse(response, {
+    listKey: "data.items",
+    totalKey: "data.total",
+    pageNumKey: "data.pageNum",
+    pageSizeKey: "data.pageSize"
+  })
+});
+```
+
+This creates:
+
+```js
+{
+  query(query),
+  create(input),
+  update(id, patch),
+  delete(id),
+  get(id)
+}
+```
+
 ## Replace Mock APIs
 
 The demo resource may start with local mock functions:
@@ -109,6 +138,32 @@ List APIs should return:
 
 If your backend uses different keys, adapt the response at the API layer before passing it to the CRUD controller.
 
+Common nested backend response:
+
+```json
+{
+  "data": {
+    "items": [],
+    "pagination": {
+      "current": 1,
+      "size": 20,
+      "totalItems": 0
+    }
+  }
+}
+```
+
+Adapter:
+
+```js
+adaptPageResponse(response, {
+  listKey: "data.items",
+  pageNumKey: "data.pagination.current",
+  pageSizeKey: "data.pagination.size",
+  totalKey: "data.pagination.totalItems"
+});
+```
+
 ## Error Protocol
 
 Backend errors should return JSON:
@@ -156,6 +211,19 @@ TOKEN_EXPIRED
 - Token injection belongs in `getToken`.
 - Do not read tokens directly inside resource modules.
 - Resource modules should receive an API object, not create global clients themselves.
+- Use `onUnauthorized` for `401` cleanup and login redirect.
+- Use `onForbidden` for global permission telemetry only; page-level `403` should still render local forbidden states.
+
+```js
+export const client = createHttpClient({
+  baseUrl: config.apiBaseUrl,
+  getToken: () => localStorage.getItem("access_token"),
+  onUnauthorized: () => {
+    localStorage.removeItem("access_token");
+    window.location.hash = "#login";
+  }
+});
+```
 
 ## Integration Checklist
 

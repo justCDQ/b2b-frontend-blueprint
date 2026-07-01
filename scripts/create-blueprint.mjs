@@ -72,6 +72,13 @@ writeBlueprintConfig(targetRoot, {
   modules: options.modules,
   withDemo: options.withDemo
 });
+writeEnvExample(targetRoot, {
+  apiBaseUrl: options.apiBaseUrl,
+  density: options.density,
+  locale: options.locale,
+  projectTitle,
+  theme: options.theme
+});
 writeProjectReadme(targetRoot, {
   apiBaseUrl: options.apiBaseUrl,
   density: options.density,
@@ -278,6 +285,7 @@ function printDryRun({ targetRoot, projectTitle, templateRoot, options }) {
   console.log("Planned output:");
   console.log(`- Copy templates/${options.template}/ into target directory.`);
   console.log("- Generate blueprint.config.js.");
+  console.log("- Generate .env.example.");
   console.log("- Generate README.md for selected demo mode.");
 
   if (!options.withDemo) {
@@ -336,12 +344,29 @@ function writeBlueprintConfig(targetRoot, options) {
   writeFileSync(join(targetRoot, "blueprint.config.js"), config);
 }
 
+function writeEnvExample(targetRoot, options) {
+  const env = `# Runtime defaults for generated projects.
+# The vanilla starter reads blueprint.config.js directly.
+# Keep this file as the deployment/env reference when wiring your own build tool.
+
+BLUEPRINT_APP_NAME=${JSON.stringify(options.projectTitle)}
+BLUEPRINT_API_BASE_URL=${options.apiBaseUrl || ""}
+BLUEPRINT_DEFAULT_LOCALE=${options.locale}
+BLUEPRINT_DEFAULT_THEME=${options.theme}
+BLUEPRINT_DENSITY=${options.density}
+`;
+
+  writeFileSync(join(targetRoot, ".env.example"), env);
+}
+
 function writeProjectReadme(targetRoot, options) {
   const moduleLines = options.modules.map((module) => `- ${toModuleLabel(module)}`).join("\n");
   const demoSection = options.withDemo
     ? `## Included Demo Modules
 
 ${moduleLines}
+
+These modules are examples. Replace mock data and resource definitions as your product model becomes clear.
 `
     : `## App Shell
 
@@ -354,6 +379,8 @@ Start from:
 - \`apps/web/src/styles.css\`
 
 Add feature modules under \`apps/web/src\` and keep reusable behavior in \`packages/headless\`.
+
+The shell still includes runtime config, theme, i18n, and the package structure, so you can add real modules without deleting demo code first.
 `;
 
   const readme = `# ${options.projectTitle}
@@ -361,6 +388,14 @@ Add feature modules under \`apps/web/src\` and keep reusable behavior in \`packa
 Framework-agnostic B2B console starter generated from B2B Frontend Blueprint.
 
 This project is a starter, not a locked framework. Read the code, replace the mock APIs, and keep the resource contracts explicit.
+
+## Install
+
+\`\`\`bash
+pnpm install
+\`\`\`
+
+This starter has no framework runtime dependency. It uses native ES modules and small local packages.
 
 ## Run
 
@@ -377,6 +412,26 @@ http://127.0.0.1:4173/apps/web/
 Do not open \`apps/web/index.html\` through \`file://\`; the app uses ES modules and package imports.
 
 ${demoSection}
+
+## Project Structure
+
+\`\`\`text
+.
+├── apps/web/                 Browser app entry.
+├── packages/auth/            Current-user and permission skeleton.
+├── packages/data/            Mock data and example resource APIs.
+├── packages/dom/             DOM binding helpers.
+├── packages/form-schema/     Field schema and validation helpers.
+├── packages/headless/        Framework-free interaction controllers.
+├── packages/i18n/            Language dictionaries and formatters.
+├── packages/import-workflow/ Import workflow contract.
+├── packages/request/         HTTP client and error normalization.
+├── packages/resource/        Resource modules and CRUD controller.
+├── packages/runtime-config/  Runtime config normalization.
+├── packages/theme/           Tokens, CSS variables, light/dark styles.
+├── blueprint.config.js       App runtime configuration.
+└── .env.example              Deployment/env reference.
+\`\`\`
 
 ## Runtime Configuration
 
@@ -401,6 +456,43 @@ export default {
 
 Use this file to change app name, backend URL, locale, theme, density, and enabled modules.
 
+The generated \`.env.example\` mirrors the same defaults for teams that later introduce Vite, Next.js, Remix, Docker, CI, or another deployment layer. In the vanilla starter, \`blueprint.config.js\` is the source of truth.
+
+## Change Common Defaults
+
+Change the app title:
+
+\`\`\`js
+// blueprint.config.js
+export default {
+  appName: "Operations Console"
+};
+\`\`\`
+
+Switch the default language:
+
+\`\`\`js
+export default {
+  defaultLocale: "zh"
+};
+\`\`\`
+
+Switch the default theme:
+
+\`\`\`js
+export default {
+  defaultTheme: "system"
+};
+\`\`\`
+
+Use compact density for data-heavy pages:
+
+\`\`\`js
+export default {
+  density: "compact"
+};
+\`\`\`
+
 ## Connect Real APIs
 
 Use \`packages/request\` as the only browser-side HTTP entry:
@@ -411,19 +503,29 @@ import config from "./blueprint.config.js";
 
 export const client = createHttpClient({
   baseUrl: config.apiBaseUrl,
-  getToken: () => localStorage.getItem("access_token")
+  getToken: () => localStorage.getItem("access_token"),
+  onUnauthorized: () => {
+    localStorage.removeItem("access_token");
+    window.location.hash = "#login";
+  }
 });
 \`\`\`
 
-Resource APIs should expose:
+Standard resource APIs can be generated with \`createResourceApi\`:
 
 \`\`\`js
-{
-  query(query),
-  create(input),
-  update(id, patch),
-  delete(id)
-}
+import { adaptPageResponse, createResourceApi } from "./packages/request/src/index.js";
+
+export const activityApi = createResourceApi({
+  client,
+  endpoint: "/activities",
+  adaptList: (response) => adaptPageResponse(response, {
+    listKey: "data.items",
+    totalKey: "data.total",
+    pageNumKey: "data.pageNum",
+    pageSizeKey: "data.pageSize"
+  })
+});
 \`\`\`
 
 List responses should use:
@@ -436,6 +538,37 @@ List responses should use:
   "total": 0
 }
 \`\`\`
+
+Error responses should use:
+
+\`\`\`json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Please check the submitted fields.",
+  "details": {}
+}
+\`\`\`
+
+Handle \`401\` by clearing the current session and redirecting to login. Handle \`403\` by rendering forbidden states or disabled actions with a visible reason.
+
+## Auth And Permission
+
+The starter includes a minimal permission skeleton in:
+
+\`\`\`text
+packages/auth/src/index.js
+\`\`\`
+
+It covers:
+
+- current user profile
+- sign in / sign out session state
+- role switching for demo verification
+- permission checks through \`auth.can(action, resource)\`
+- disabled reasons through \`auth.reason(action, resource)\`
+- menu filtering through \`filterModulesByPermission\`
+
+Replace the demo profiles with your backend user payload when real login is ready.
 
 ## Add A Resource Module
 
@@ -455,6 +588,14 @@ A resource module should define:
 - row actions
 
 Then add the module key to \`enabledModules\` in \`blueprint.config.js\`.
+
+## Remove Demo Modules Later
+
+When you no longer need the examples:
+
+1. Remove unused module keys from \`enabledModules\`.
+2. Delete unused demo data from \`packages/data\`.
+3. Keep reusable packages such as \`request\`, \`resource\`, \`form-schema\`, \`theme\`, \`i18n\`, and \`auth\`.
 
 ## Packages
 
@@ -478,6 +619,15 @@ pnpm build
 pnpm test
 pnpm check
 \`\`\`
+
+Run \`pnpm build\` before publishing or handing the project to another developer.
+
+## Troubleshooting
+
+- If the page is blank, make sure you opened the dev server URL, not \`file://\`.
+- If styles look wrong, check that \`packages/theme/src/styles.css\` is linked from \`apps/web/index.html\`.
+- If API calls fail, confirm \`apiBaseUrl\` in \`blueprint.config.js\` and the backend response shape.
+- If a module is missing from navigation, confirm its key exists in \`enabledModules\`.
 
 ## AI Usage
 

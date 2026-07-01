@@ -7,6 +7,12 @@ import {
   createRequestRaceGuard,
   createSelectionController
 } from "../packages/headless/src/index.js";
+import {
+  createAuthSession,
+  createMemoryAuthStore,
+  createRequiredPermission,
+  filterModulesByPermission
+} from "../packages/auth/src/index.js";
 
 const rows = [
   { id: "1", locked: false },
@@ -67,5 +73,28 @@ assert.deepEqual(query.toQueryObject(), {
   pageNum: 1,
   pageSize: 20
 });
+
+const authSession = createAuthSession({
+  storage: createMemoryAuthStore({
+    role: "viewer",
+    authenticated: "true"
+  })
+});
+assert.equal(authSession.getState().role, "viewer");
+assert.equal(authSession.getState().auth.can("read", "users"), true);
+assert.equal(authSession.getState().auth.can("create", "users"), false);
+
+const visibleModules = filterModulesByPermission([
+  { key: "users", requiredPermission: createRequiredPermission("users", "read") },
+  { key: "imports", requiredPermission: createRequiredPermission("import", "read") }
+], authSession.getState().auth);
+assert.deepEqual(visibleModules.map((module) => module.key), ["users"]);
+
+authSession.switchRole("owner");
+assert.equal(authSession.getState().auth.can("delete", "projects"), true);
+authSession.signOut();
+assert.equal(authSession.getState().authenticated, false);
+authSession.signIn("operator");
+assert.equal(authSession.getState().role, "operator");
 
 console.log("Headless smoke tests passed.");

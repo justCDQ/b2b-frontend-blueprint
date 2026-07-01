@@ -137,6 +137,8 @@ console.log("Scaffold smoke tests passed.");
 
 function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
   const config = readFileSync(join(targetRoot, "blueprint.config.js"), "utf8");
+  const envExample = readFileSync(join(targetRoot, ".env.example"), "utf8");
+  const gitignore = readFileSync(join(targetRoot, ".gitignore"), "utf8");
   const readme = readFileSync(join(targetRoot, "README.md"), "utf8");
   const main = readFileSync(join(targetRoot, "apps/web/src/main.js"), "utf8");
 
@@ -158,6 +160,14 @@ function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
     throw new Error("Generated config is missing module metadata.");
   }
 
+  if (!envExample.includes("BLUEPRINT_APP_NAME") || !envExample.includes("BLUEPRINT_DEFAULT_LOCALE")) {
+    throw new Error("Generated .env.example is missing runtime defaults.");
+  }
+
+  if (!gitignore.includes("node_modules/") || !gitignore.includes("!.env.example")) {
+    throw new Error("Generated .gitignore is missing expected defaults.");
+  }
+
   for (const module of modules) {
     if (!config.includes(`"${module}"`)) {
       throw new Error(`Generated config is missing module: ${module}.`);
@@ -170,6 +180,10 @@ function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
 
   if (withDemo && !readme.includes("Included Demo Modules")) {
     throw new Error("Generated with-demo README is missing demo module section.");
+  }
+
+  if (!readme.includes("Project Structure") || !readme.includes("Connect Real APIs")) {
+    throw new Error("Generated README is missing onboarding sections.");
   }
 
   if (!withDemo && !readme.includes("generated without demo modules")) {

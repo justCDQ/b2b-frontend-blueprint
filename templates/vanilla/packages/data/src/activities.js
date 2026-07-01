@@ -57,6 +57,7 @@ export const activityResource = createResourceModule({
   label: "资源 CRUD",
   navLabel: "资源 CRUD",
   resource: "activity",
+  requiredPermission: { resource: "activity", action: "read" },
   description: "由 Resource Module Pattern 驱动的通用资源管理页面示例。",
   form: activityFormSchema,
   importContract: activityImportContract,

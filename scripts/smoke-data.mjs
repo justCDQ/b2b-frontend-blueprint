@@ -12,7 +12,12 @@ import {
   updateUserRecord
 } from "../packages/data/src/index.js";
 import { validateValues } from "../packages/form-schema/src/index.js";
-import { createHttpClient, createMockClient } from "../packages/request/src/index.js";
+import {
+  adaptPageResponse,
+  createHttpClient,
+  createMockClient,
+  createResourceApi
+} from "../packages/request/src/index.js";
 import { createCrudController, createModuleRegistry } from "../packages/resource/src/index.js";
 
 const ownerContext = { currentRole: "owner", delay: 0 };
@@ -115,11 +120,51 @@ const mockClient = createMockClient({
 const mockResponse = await mockClient.get("/activities");
 assert.deepEqual(mockResponse, { list: [], total: 0 });
 
+const nestedPage = adaptPageResponse({
+  data: {
+    items: [{ id: "a1" }],
+    pagination: {
+      current: 2,
+      size: 10,
+      totalItems: 21
+    }
+  }
+}, {
+  listKey: "items",
+  pageNumKey: "pagination.current",
+  pageSizeKey: "pagination.size",
+  totalKey: "pagination.totalItems"
+});
+assert.deepEqual(nestedPage, {
+  list: [{ id: "a1" }],
+  pageNum: 2,
+  pageSize: 10,
+  total: 21
+});
+
 let requestedUrl = "";
+let unauthorizedCalled = false;
 const httpClient = createHttpClient({
   baseUrl: "https://api.example.com",
-  fetchImpl: async (url) => {
+  onUnauthorized: () => {
+    unauthorizedCalled = true;
+  },
+  fetchImpl: async (url, options = {}) => {
     requestedUrl = url;
+    if (url.endsWith("/unauthorized")) {
+      return new Response(JSON.stringify({ code: "TOKEN_EXPIRED", message: "Token expired." }), {
+        headers: { "content-type": "application/json" },
+        status: 401
+      });
+    }
+
+    if (options.method === "POST") {
+      return new Response(JSON.stringify({ id: "created-001" }), {
+        headers: { "content-type": "application/json" },
+        status: 200
+      });
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { "content-type": "application/json" },
       status: 200
@@ -128,5 +173,31 @@ const httpClient = createHttpClient({
 });
 await httpClient.get("/activities", { query: { keyword: "summer", status: "online" } });
 assert.equal(requestedUrl, "https://api.example.com/activities?keyword=summer&status=online");
+await assert.rejects(() => httpClient.get("/unauthorized"), /Token expired/);
+assert.equal(unauthorizedCalled, true);
+
+const resourceApi = createResourceApi({
+  client: createMockClient({
+    "GET /activities": () => ({
+      data: {
+        items: [{ id: "activity-001", title: "Launch" }],
+        total: 1,
+        pageNum: 1,
+        pageSize: 20
+      }
+    }),
+    "POST /activities": ({ body }) => ({ id: "activity-002", ...body }),
+    "PATCH /activities/activity-001": ({ body }) => ({ id: "activity-001", ...body }),
+    "DELETE /activities/activity-001": () => ({ id: "activity-001" })
+  }),
+  endpoint: "/activities",
+  adaptList: (response) => adaptPageResponse(response, { listKey: "items" })
+});
+const resourcePage = await resourceApi.query({ pageNum: 1 });
+assert.equal(resourcePage.list[0].title, "Launch");
+assert.equal(resourcePage.total, 1);
+assert.equal((await resourceApi.create({ title: "Created" })).title, "Created");
+assert.equal((await resourceApi.update("activity-001", { title: "Updated" })).title, "Updated");
+assert.equal((await resourceApi.delete("activity-001")).id, "activity-001");
 
 console.log("Data smoke tests passed.");
