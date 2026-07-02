@@ -1,7 +1,8 @@
 export function createAuthContext({
   currentUser,
   permissions = [],
-  roles = []
+  roles = [],
+  permissionReasons = {}
 } = {}) {
   const permissionSet = new Set(permissions);
   const roleSet = new Set(roles.length > 0 ? roles : currentUser?.roles || []);
@@ -20,7 +21,9 @@ export function createAuthContext({
 
   function reason(action, resource, record) {
     if (can(action, resource, record)) return "";
-    return "当前角色没有执行该操作的权限。";
+    const key = `${resource}:${action}`;
+    const wildcard = `${resource}:*`;
+    return permissionReasons[key] || permissionReasons[wildcard] || permissionReasons.default || "当前角色没有执行该操作的权限。";
   }
 
   return {
@@ -98,23 +101,29 @@ export function createDemoAuthContext(role = "owner") {
 export function createAuthSession({
   profiles = demoAuthProfiles,
   defaultRole = "owner",
-  storage
+  storage,
+  tokenKey = "accessToken"
 } = {}) {
   const safeStorage = storage || createMemoryAuthStore();
   let role = safeStorage.get("role") || defaultRole;
   let authenticated = safeStorage.get("authenticated") !== "false";
+  let accessToken = safeStorage.get(tokenKey) || "";
 
-  function signIn(nextRole = defaultRole) {
+  function signIn(nextRole = defaultRole, session = {}) {
     role = profiles[nextRole] ? nextRole : defaultRole;
     authenticated = true;
+    accessToken = session.accessToken || accessToken;
     safeStorage.set("role", role);
     safeStorage.set("authenticated", "true");
+    if (accessToken) safeStorage.set(tokenKey, accessToken);
     return getState();
   }
 
   function signOut() {
     authenticated = false;
+    accessToken = "";
     safeStorage.set("authenticated", "false");
+    safeStorage.remove(tokenKey);
     return getState();
   }
 
@@ -126,16 +135,23 @@ export function createAuthSession({
   }
 
   function getState() {
+    const profile = profiles[role] || profiles[defaultRole];
+
     return {
       authenticated,
       role,
-      profile: profiles[role] || profiles[defaultRole],
-      auth: authenticated ? createAuthContext(profiles[role] || profiles[defaultRole]) : createAuthContext()
+      accessToken,
+      profile,
+      currentUser: authenticated ? profile?.currentUser : null,
+      auth: authenticated ? createAuthContext(profile) : createAuthContext()
     };
   }
 
   return {
     getState,
+    getToken() {
+      return getState().accessToken;
+    },
     signIn,
     signOut,
     switchRole
@@ -199,6 +215,66 @@ export function createRequiredPermission(resource, action = "read") {
     resource,
     action
   };
+}
+
+export function normalizeBackendUser(payload = {}) {
+  const source = payload.user || payload.currentUser || payload;
+  const roles = normalizeStringArray(source.roles || source.role ? source.roles || [source.role] : []);
+  const permissions = normalizeStringArray(payload.permissions || source.permissions || []);
+
+  return {
+    currentUser: {
+      id: source.id || source.userId || "",
+      name: source.name || source.displayName || source.username || "",
+      email: source.email || "",
+      roles
+    },
+    permissions,
+    permissionReasons: payload.permissionReasons || {}
+  };
+}
+
+export function createRouteGuard({ auth, fallbackPath = "#login" } = {}) {
+  return {
+    canAccess(route) {
+      if (!route?.requiredPermission) return true;
+      return auth?.can?.(route.requiredPermission.action, route.requiredPermission.resource) || false;
+    },
+    resolve(route) {
+      if (this.canAccess(route)) {
+        return {
+          allowed: true,
+          route
+        };
+      }
+
+      return {
+        allowed: false,
+        fallbackPath,
+        reason: auth?.reason?.(route.requiredPermission.action, route.requiredPermission.resource) || "当前角色没有访问该页面的权限。"
+      };
+    }
+  };
+}
+
+export function createForbiddenState({
+  title = "无权限访问",
+  description = "当前角色没有访问该内容的权限。",
+  actionLabel = "返回",
+  actionHref = "#"
+} = {}) {
+  return {
+    type: "forbidden",
+    title,
+    description,
+    actionLabel,
+    actionHref
+  };
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => typeof item === "string" && item.trim());
 }
 
 export const defaultAdminAuth = createAuthContext({

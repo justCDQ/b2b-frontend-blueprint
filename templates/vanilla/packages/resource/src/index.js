@@ -38,6 +38,64 @@ export function createResourceModule(definition) {
   };
 }
 
+export function createResourcePermissions(resource) {
+  return {
+    read: { resource, action: "read" },
+    create: { resource, action: "create" },
+    update: { resource, action: "update" },
+    delete: { resource, action: "delete" },
+    batch: { resource, action: "batch" },
+    import: { resource, action: "import" }
+  };
+}
+
+export function createResourceModuleParts({
+  key,
+  label,
+  navLabel,
+  description = "",
+  resource = key,
+  permissions = createResourcePermissions(resource),
+  schema = {},
+  api,
+  actions = [],
+  importContract
+}) {
+  return {
+    key,
+    label,
+    navLabel: navLabel || label,
+    description,
+    resource,
+    permissions,
+    schema: {
+      filters: schema.filters || [],
+      columns: schema.columns || [],
+      form: schema.form
+    },
+    api,
+    actions,
+    importContract
+  };
+}
+
+export function createResourceModuleFromParts(parts) {
+  return createResourceModule({
+    key: parts.key,
+    label: parts.label,
+    navLabel: parts.navLabel,
+    description: parts.description,
+    resource: parts.resource,
+    requiredPermission: parts.permissions?.read,
+    filters: parts.schema?.filters,
+    columns: parts.schema?.columns,
+    form: parts.schema?.form,
+    api: parts.api,
+    actions: parts.actions,
+    importContract: parts.importContract
+  });
+}
+
 export function createCrudController({
   resource,
   api,

@@ -9,10 +9,17 @@ import {
 } from "../packages/headless/src/index.js";
 import {
   createAuthSession,
+  createForbiddenState,
   createMemoryAuthStore,
   createRequiredPermission,
-  filterModulesByPermission
+  createRouteGuard,
+  filterModulesByPermission,
+  normalizeBackendUser
 } from "../packages/auth/src/index.js";
+import {
+  createResourceModuleFromParts,
+  createResourceModuleParts
+} from "../packages/resource/src/index.js";
 
 const rows = [
   { id: "1", locked: false },
@@ -96,5 +103,46 @@ authSession.signOut();
 assert.equal(authSession.getState().authenticated, false);
 authSession.signIn("operator");
 assert.equal(authSession.getState().role, "operator");
+authSession.signIn("admin", { accessToken: "token-001" });
+assert.equal(authSession.getToken(), "token-001");
+
+const backendProfile = normalizeBackendUser({
+  user: {
+    userId: "backend-user-001",
+    displayName: "小明",
+    role: "admin",
+    email: "xiaoming@example.com"
+  },
+  permissions: ["orders:read", "orders:update"]
+});
+assert.deepEqual(backendProfile.currentUser.roles, ["admin"]);
+assert.equal(backendProfile.permissions.includes("orders:update"), true);
+
+const routeGuard = createRouteGuard({
+  auth: authSession.getState().auth
+});
+assert.equal(routeGuard.resolve({ requiredPermission: createRequiredPermission("users", "read") }).allowed, true);
+assert.equal(routeGuard.resolve({ requiredPermission: createRequiredPermission("billing", "read") }).allowed, false);
+assert.equal(createForbiddenState().type, "forbidden");
+
+const orderParts = createResourceModuleParts({
+  key: "orders",
+  label: "Orders",
+  resource: "orders",
+  schema: {
+    filters: [{ name: "keyword", label: "Keyword", type: "search" }],
+    columns: [{ key: "name", label: "Name" }],
+    form: { fields: [] }
+  },
+  api: {
+    query: async () => ({ list: [], total: 0 }),
+    create: async (input) => input,
+    update: async (_id, patch) => patch,
+    delete: async (id) => ({ id })
+  }
+});
+const orderModule = createResourceModuleFromParts(orderParts);
+assert.equal(orderModule.requiredPermission.resource, "orders");
+assert.equal(orderModule.filters[0].name, "keyword");
 
 console.log("Headless smoke tests passed.");

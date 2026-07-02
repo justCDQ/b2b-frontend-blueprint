@@ -60,6 +60,16 @@ if (existsSync(dryRunTarget)) {
   throw new Error("Dry run should not create the target directory.");
 }
 
+const help = run(process.execPath, ["scripts/create-blueprint.mjs", "--help"]);
+if (!help.stdout.includes("create-b2b-blueprint") || !help.stdout.includes("Examples:")) {
+  throw new Error("Scaffold help output is missing productized CLI guidance.");
+}
+
+const version = run(process.execPath, ["scripts/create-blueprint.mjs", "--version"]);
+if (!version.stdout.trim()) {
+  throw new Error("Scaffold version output is empty.");
+}
+
 run(process.execPath, [
   "scripts/create-blueprint.mjs",
   join(tmpdir(), "blueprint-scaffold-with-demo"),
@@ -141,6 +151,7 @@ function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
   const gitignore = readFileSync(join(targetRoot, ".gitignore"), "utf8");
   const readme = readFileSync(join(targetRoot, "README.md"), "utf8");
   const main = readFileSync(join(targetRoot, "apps/web/src/main.js"), "utf8");
+  const index = readFileSync(join(targetRoot, "apps/web/index.html"), "utf8");
 
   if (!config.includes(`template: "vanilla"`)) {
     throw new Error("Generated config is missing template metadata.");
@@ -189,6 +200,14 @@ function assertGeneratedFiles(targetRoot, { modules, withDemo }) {
   if (!withDemo && !readme.includes("generated without demo modules")) {
     throw new Error("Generated without-demo README is missing app shell guidance.");
   }
+
+  if (!withDemo && (!index.includes("Clean app shell") || !main.includes("data-api-status"))) {
+    throw new Error("Generated without-demo app shell is missing onboarding UI.");
+  }
+
+  if (!withDemo && (!index.includes("System readiness") || !index.includes("createResourceModuleParts"))) {
+    throw new Error("Generated without-demo app shell is missing production-start guidance.");
+  }
 }
 
 function getExpectedModules(args) {
@@ -213,6 +232,8 @@ function run(command, args, cwd = process.cwd()) {
     process.stderr.write(result.stderr);
     process.exit(result.status || 1);
   }
+
+  return result;
 }
 
 function runExpectFailure(command, args, cwd = process.cwd()) {

@@ -2,6 +2,7 @@ export {
   activityFormSchema,
   activityImportContract,
   activityResource,
+  activityResourceParts,
   activityStatuses,
   createActivityRecord,
   deleteActivityRecord,

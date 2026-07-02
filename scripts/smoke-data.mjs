@@ -3,6 +3,7 @@ import { defaultOperatorAuth } from "../packages/auth/src/index.js";
 import {
   activityImportContract,
   activityResource,
+  activityResourceParts,
   createActivityRecord,
   createUserRecord,
   deleteUserRecord,
@@ -99,6 +100,7 @@ assert.ok(validation.errors.title);
 const registry = createModuleRegistry([activityResource]);
 assert.equal(registry.get("activities").label, "资源 CRUD");
 assert.equal(registry.enabled(["activities"]).length, 1);
+assert.equal(activityResourceParts.schema.columns.length, activityResource.columns.length);
 
 const crud = createCrudController({
   resource: activityResource,

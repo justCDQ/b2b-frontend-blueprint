@@ -1,6 +1,6 @@
 import { createFormSchema } from "../../form-schema/src/index.js";
 import { createImportWorkflowContract } from "../../import-workflow/src/index.js";
-import { createResourceModule } from "../../resource/src/index.js";
+import { createResourceModuleFromParts, createResourceModuleParts } from "../../resource/src/index.js";
 
 export const activityStatuses = ["draft", "online", "offline", "ended"];
 
@@ -52,29 +52,30 @@ export const activityImportContract = createImportWorkflowContract({
   maxFileSizeMb: 30
 });
 
-export const activityResource = createResourceModule({
+export const activityResourceParts = createResourceModuleParts({
   key: "activities",
   label: "资源 CRUD",
   navLabel: "资源 CRUD",
   resource: "activity",
-  requiredPermission: { resource: "activity", action: "read" },
   description: "由 Resource Module Pattern 驱动的通用资源管理页面示例。",
-  form: activityFormSchema,
   importContract: activityImportContract,
-  filters: [
-    { name: "keyword", label: "关键词", type: "search" },
-    { name: "status", label: "状态", type: "select", options: activityStatuses },
-    { name: "channel", label: "渠道", type: "select", options: ["App", "Web", "Partner"] }
-  ],
-  columns: [
-    { key: "title", label: "活动名称" },
-    { key: "status", label: "状态" },
-    { key: "channel", label: "渠道" },
-    { key: "startAt", label: "开始时间" },
-    { key: "endAt", label: "结束时间" },
-    { key: "owner", label: "负责人" },
-    { key: "updatedAt", label: "更新时间" }
-  ],
+  schema: {
+    form: activityFormSchema,
+    filters: [
+      { name: "keyword", label: "关键词", type: "search" },
+      { name: "status", label: "状态", type: "select", options: activityStatuses },
+      { name: "channel", label: "渠道", type: "select", options: ["App", "Web", "Partner"] }
+    ],
+    columns: [
+      { key: "title", label: "活动名称" },
+      { key: "status", label: "状态" },
+      { key: "channel", label: "渠道" },
+      { key: "startAt", label: "开始时间" },
+      { key: "endAt", label: "结束时间" },
+      { key: "owner", label: "负责人" },
+      { key: "updatedAt", label: "更新时间" }
+    ]
+  },
   actions: [
     { key: "edit", label: "修改", scope: "row" },
     { key: "toggleOnline", label: "上架/下架", scope: "row" },
@@ -87,6 +88,8 @@ export const activityResource = createResourceModule({
     delete: deleteActivityRecord
   }
 });
+
+export const activityResource = createResourceModuleFromParts(activityResourceParts);
 
 export async function queryActivities(query = {}) {
   await delay(120);

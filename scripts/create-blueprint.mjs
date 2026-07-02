@@ -1,14 +1,28 @@
+#!/usr/bin/env node
+
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const packageJson = JSON.parse(readFileSync(join(repositoryRoot, "package.json"), "utf8"));
 const supportedTemplates = ["vanilla"];
 const supportedModules = ["users", "imports", "projects", "activities"];
 const defaultDemoModules = ["users", "imports", "projects"];
 
 const args = process.argv.slice(2);
 const options = parseArgs(args);
+
+if (options.help) {
+  printHelp();
+  process.exit(0);
+}
+
+if (options.version) {
+  console.log(packageJson.version);
+  process.exit(0);
+}
+
 const templateRoot = join(repositoryRoot, `templates/${options.template}`);
 
 if (!options.target) {
@@ -89,24 +103,27 @@ writeProjectReadme(targetRoot, {
   withDemo: options.withDemo
 });
 
-console.log(`Created ${projectTitle} at ${targetRoot}`);
-console.log("");
-console.log(`Template: ${options.template}`);
-console.log(`Modules: ${options.modules.length > 0 ? options.modules.join(", ") : "none"}`);
-console.log("");
-console.log("Next steps:");
-console.log(`  cd ${options.target}`);
-console.log("  pnpm build");
-console.log("  pnpm dev");
-console.log("");
-console.log("Open:");
-console.log("  http://127.0.0.1:4173/apps/web/");
+printSuccess({
+  targetRoot,
+  projectTitle,
+  options
+});
 
 function printHelp() {
+  console.log("B2B Frontend Blueprint scaffold");
+  console.log("");
   console.log("Usage:");
+  console.log("  create-b2b-blueprint <project-name> [options]");
   console.log("  node scripts/create-blueprint.mjs <project-name> [options]");
   console.log("");
+  console.log("Examples:");
+  console.log("  node scripts/create-blueprint.mjs ops-console --template vanilla --with-demo");
+  console.log("  node scripts/create-blueprint.mjs ops-console --without-demo --locale zh --theme system");
+  console.log("  node scripts/create-blueprint.mjs ops-console --modules users,activities --api-base-url https://api.example.com");
+  console.log("");
   console.log("Options:");
+  console.log("  -h, --help           Show help.");
+  console.log("  -v, --version        Show package version.");
   console.log("  --target <path>       Target directory. Overrides positional project name.");
   console.log("  --template vanilla    Template name. Currently only vanilla is supported.");
   console.log("  --with-demo           Include demo modules. Default.");
@@ -141,6 +158,16 @@ function parseArgs(values) {
 
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
+
+    if (value === "--help" || value === "-h") {
+      parsed.help = true;
+      continue;
+    }
+
+    if (value === "--version" || value === "-v") {
+      parsed.version = true;
+      continue;
+    }
 
     if (value === "--force") {
       parsed.force = true;
@@ -289,7 +316,7 @@ function printDryRun({ targetRoot, projectTitle, templateRoot, options }) {
   console.log("- Generate README.md for selected demo mode.");
 
   if (!options.withDemo) {
-    console.log("- Replace demo app with the minimal app shell.");
+    console.log("- Replace demo app with a clean production-start shell.");
   }
 
   console.log("- Replace project placeholders.");
@@ -305,6 +332,33 @@ function printDryRun({ targetRoot, projectTitle, templateRoot, options }) {
 
   console.log("");
   console.log("No files were written.");
+}
+
+function printSuccess({ targetRoot, projectTitle, options }) {
+  console.log("");
+  console.log(`Created ${projectTitle}`);
+  console.log("");
+  console.log(`Location: ${targetRoot}`);
+  console.log(`Template: ${options.template}`);
+  console.log(`Mode: ${options.withDemo ? "demo starter" : "clean app shell"}`);
+  console.log(`Modules: ${options.modules.length > 0 ? options.modules.join(", ") : "none"}`);
+  console.log(`Locale: ${options.locale}`);
+  console.log(`Theme: ${options.theme}`);
+  console.log(`Density: ${options.density}`);
+  console.log(`API base URL: ${options.apiBaseUrl || "(empty)"}`);
+  console.log("");
+  console.log("Next steps:");
+  console.log(`  cd ${options.target}`);
+  console.log("  pnpm build");
+  console.log("  pnpm dev");
+  console.log("");
+  console.log("Open:");
+  console.log("  http://127.0.0.1:4173/apps/web/");
+  console.log("");
+  console.log("Useful files:");
+  console.log("  blueprint.config.js");
+  console.log("  apps/web/src/main.js");
+  console.log("  README.md");
 }
 
 function countFiles(directory) {
@@ -564,28 +618,72 @@ It covers:
 - current user profile
 - sign in / sign out session state
 - role switching for demo verification
+- backend user payload normalization
+- route permission guard
+- forbidden state helpers
 - permission checks through \`auth.can(action, resource)\`
 - disabled reasons through \`auth.reason(action, resource)\`
 - menu filtering through \`filterModulesByPermission\`
 
 Replace the demo profiles with your backend user payload when real login is ready.
 
-## Add A Resource Module
+Recommended backend login response:
 
-Start from:
-
-\`\`\`text
-packages/data/src/activities.js
+\`\`\`json
+{
+  "accessToken": "token",
+  "user": {
+    "id": "user-001",
+    "name": "小明",
+    "email": "xiaoming@example.com",
+    "roles": ["admin"]
+  },
+  "permissions": ["orders:read", "orders:update"]
+}
 \`\`\`
 
-A resource module should define:
+Normalize it before creating the auth context:
 
-- filters
-- table columns
-- form schema
-- CRUD API
-- optional import contract
-- row actions
+\`\`\`js
+import { normalizeBackendUser } from "./packages/auth/src/index.js";
+
+const profile = normalizeBackendUser(loginResponse);
+\`\`\`
+
+## Add A Resource Module
+
+For a maintainable module, split resource concerns by responsibility:
+
+\`\`\`text
+orders/
+├── orders.schema.js       Filters, columns, and form schema.
+├── orders.api.js          createResourceApi adapter.
+├── orders.permissions.js  Resource permission map.
+└── orders.module.js       createResourceModuleFromParts composition.
+\`\`\`
+
+The module composition should look like:
+
+\`\`\`js
+import {
+  createResourceModuleFromParts,
+  createResourceModuleParts
+} from "./packages/resource/src/index.js";
+
+export const orderResourceParts = createResourceModuleParts({
+  key: "orders",
+  label: "Orders",
+  resource: "orders",
+  schema: {
+    filters,
+    columns,
+    form
+  },
+  api: orderApi
+});
+
+export const orderResource = createResourceModuleFromParts(orderResourceParts);
+\`\`\`
 
 Then add the module key to \`enabledModules\` in \`blueprint.config.js\`.
 
@@ -669,12 +767,105 @@ function stripDemoModules(targetRoot) {
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
-    <main class="empty-shell">
-      <p class="eyebrow">B2B Blueprint</p>
-      <h1 data-app-title>{{projectTitle}}</h1>
-      <p>Start building your console by adding modules under <code>apps/web/src</code>.</p>
-      <button class="button button--primary" id="theme-toggle" type="button">Switch to dark</button>
-    </main>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand" data-app-title>{{projectTitle}}</div>
+        <nav class="nav" aria-label="App navigation">
+          <a class="nav__item nav__item--active" href="#overview">Overview</a>
+          <a class="nav__item" href="#resources">Resources</a>
+          <a class="nav__item" href="#settings">Settings</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Clean app shell</p>
+            <h1 data-app-title>{{projectTitle}}</h1>
+            <p>Start from a framework-agnostic B2B console shell with runtime config, theme, i18n, request, auth, and resource packages ready.</p>
+          </div>
+          <div class="actions">
+            <button class="button button--secondary" id="api-check" type="button">Check API</button>
+            <button class="button button--primary" id="theme-toggle" type="button">Switch to dark</button>
+          </div>
+        </header>
+
+        <section class="dashboard-grid">
+          <article class="metric-card">
+            <span>Runtime</span>
+            <strong data-runtime-locale>zh</strong>
+            <small>Default locale</small>
+          </article>
+          <article class="metric-card">
+            <span>Theme</span>
+            <strong data-runtime-theme>system</strong>
+            <small>Light and dark modes are available</small>
+          </article>
+          <article class="metric-card">
+            <span>Density</span>
+            <strong data-runtime-density>comfortable</strong>
+            <small>Use compact for data-heavy pages</small>
+          </article>
+          <article class="metric-card">
+            <span>API</span>
+            <strong data-api-status>Not configured</strong>
+            <small data-api-base>Set apiBaseUrl in blueprint.config.js</small>
+          </article>
+        </section>
+
+        <section class="readiness-grid">
+          <article class="readiness-panel">
+            <div class="section-header">
+              <div>
+                <p class="eyebrow">System readiness</p>
+                <h2>Backend console foundations</h2>
+                <p>The app shell already includes the common infrastructure most B2B projects need before feature work starts.</p>
+              </div>
+            </div>
+            <ul class="check-list">
+              <li><strong>Auth session</strong><span>Current user, token slot, sign in/out, route guard, and forbidden state helpers.</span></li>
+              <li><strong>Permission model</strong><span>Menu filtering and action checks through <code>auth.can(action, resource)</code>.</span></li>
+              <li><strong>API adapter</strong><span>HTTP client, request timeout, token injection, 401/403 hooks, and resource CRUD API factory.</span></li>
+              <li><strong>Resource registry</strong><span>Resource modules can be composed from schema, API, permissions, and page metadata.</span></li>
+            </ul>
+          </article>
+
+          <article class="code-panel">
+            <p class="eyebrow">First module shape</p>
+            <pre><code>createResourceModuleParts({
+  key: "orders",
+  resource: "orders",
+  schema: { filters, columns, form },
+  api: orderApi
+});</code></pre>
+          </article>
+        </section>
+
+        <section class="workbench">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Next build step</p>
+              <h2>Add your first resource module</h2>
+              <p>Define filters, table columns, form schema, permissions, and an API adapter. Then add the module key to <code>enabledModules</code>.</p>
+            </div>
+          </div>
+          <div class="step-list">
+            <div class="step-item">
+              <strong>1. Create resource schema</strong>
+              <span>Start in <code>packages/data/src</code> or create a new business package.</span>
+            </div>
+            <div class="step-item">
+              <strong>2. Connect real API</strong>
+              <span>Use <code>createResourceApi</code> from <code>packages/request</code>.</span>
+            </div>
+            <div class="step-item">
+              <strong>3. Register navigation</strong>
+              <span>Add your module key to <code>blueprint.config.js</code>.</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
@@ -693,6 +884,7 @@ const i18n = createI18n({
   locale: config.defaultLocale
 });
 const title = config.appName || "B2B Console";
+const apiBaseUrl = config.apiBaseUrl || "";
 
 attachThemeController({
   root: document.documentElement,
@@ -707,7 +899,18 @@ attachThemeController({
 
 document.title = title;
 document.documentElement.lang = i18n.locale;
-document.querySelector("[data-app-title]").textContent = title;
+for (const element of document.querySelectorAll("[data-app-title]")) {
+  element.textContent = title;
+}
+document.querySelector("[data-runtime-locale]").textContent = config.defaultLocale;
+document.querySelector("[data-runtime-theme]").textContent = config.defaultTheme;
+document.querySelector("[data-runtime-density]").textContent = config.density;
+document.querySelector("[data-api-status]").textContent = apiBaseUrl ? "Configured" : "Not configured";
+document.querySelector("[data-api-base]").textContent = apiBaseUrl || "Set apiBaseUrl in blueprint.config.js";
+document.querySelector("#api-check").addEventListener("click", () => {
+  const status = document.querySelector("[data-api-status]");
+  status.textContent = apiBaseUrl ? "Ready to connect" : "Missing apiBaseUrl";
+});
 `
   );
 
@@ -724,14 +927,78 @@ body {
   margin: 0;
 }
 
-.empty-shell {
+.shell {
   display: grid;
-  gap: var(--b2b-space-3);
-  margin: 0 auto;
-  max-width: 720px;
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 100vh;
-  padding: var(--b2b-space-6);
-  place-content: center;
+}
+
+.sidebar {
+  background: var(--b2b-color-surface);
+  border-right: 1px solid var(--b2b-color-border);
+  padding: var(--b2b-space-5) var(--b2b-space-4);
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: var(--b2b-space-5);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--b2b-space-1);
+}
+
+.nav__item {
+  border-radius: var(--b2b-radius-sm);
+  color: var(--b2b-color-text-muted);
+  font-size: 14px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.nav__item:hover,
+.nav__item--active {
+  background: var(--b2b-color-surface-hover);
+  color: var(--b2b-color-text);
+}
+
+.main {
+  display: grid;
+  gap: var(--b2b-space-5);
+  min-width: 0;
+  padding: var(--b2b-space-5);
+}
+
+.page-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--b2b-color-border);
+  display: flex;
+  gap: var(--b2b-space-4);
+  justify-content: space-between;
+  padding-bottom: var(--b2b-space-5);
+}
+
+.page-header h1 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.page-header p,
+.section-header p {
+  color: var(--b2b-color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--b2b-space-2);
+  justify-content: flex-end;
 }
 
 .eyebrow {
@@ -743,11 +1010,118 @@ body {
 }
 
 h1,
+h2,
 p {
   margin: 0;
 }
 
-p {
+.dashboard-grid {
+  display: grid;
+  gap: var(--b2b-space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-card,
+.workbench {
+  background: var(--b2b-color-surface);
+  border: 1px solid var(--b2b-color-border);
+  border-radius: var(--b2b-radius-md);
+}
+
+.metric-card {
+  display: grid;
+  gap: 6px;
+  padding: var(--b2b-space-4);
+}
+
+.metric-card span,
+.metric-card small {
+  color: var(--b2b-color-text-muted);
+}
+
+.metric-card strong {
+  font-size: 20px;
+}
+
+.workbench {
+  display: grid;
+  gap: var(--b2b-space-4);
+  padding: var(--b2b-space-5);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.readiness-grid {
+  display: grid;
+  gap: var(--b2b-space-4);
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+}
+
+.readiness-panel,
+.code-panel {
+  background: var(--b2b-color-surface);
+  border: 1px solid var(--b2b-color-border);
+  border-radius: var(--b2b-radius-md);
+  padding: var(--b2b-space-5);
+}
+
+.check-list {
+  display: grid;
+  gap: var(--b2b-space-3);
+  list-style: none;
+  margin: var(--b2b-space-4) 0 0;
+  padding: 0;
+}
+
+.check-list li {
+  border-top: 1px solid var(--b2b-color-border);
+  display: grid;
+  gap: 4px;
+  padding-top: var(--b2b-space-3);
+}
+
+.check-list span {
+  color: var(--b2b-color-text-muted);
+  line-height: 1.6;
+}
+
+.code-panel {
+  align-content: start;
+  display: grid;
+  gap: var(--b2b-space-3);
+}
+
+pre {
+  background: var(--b2b-color-bg);
+  border: 1px solid var(--b2b-color-border);
+  border-radius: var(--b2b-radius-sm);
+  margin: 0;
+  overflow: auto;
+  padding: var(--b2b-space-4);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+
+.step-list {
+  display: grid;
+  gap: var(--b2b-space-3);
+}
+
+.step-item {
+  border: 1px solid var(--b2b-color-border);
+  border-radius: var(--b2b-radius-sm);
+  display: grid;
+  gap: 4px;
+  padding: var(--b2b-space-4);
+}
+
+.step-item span {
   color: var(--b2b-color-text-muted);
   line-height: 1.6;
 }
@@ -766,6 +1140,41 @@ p {
 .button--primary {
   background: var(--b2b-color-accent);
   color: #ffffff;
+}
+
+.button--secondary {
+  background: var(--b2b-color-surface);
+  border-color: var(--b2b-color-border);
+  color: var(--b2b-color-text);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-bottom: 1px solid var(--b2b-color-border);
+    border-right: 0;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .readiness-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    display: grid;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 `
   );

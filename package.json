@@ -5,6 +5,9 @@
   "description": "AI-ready rules and runnable blueprint for B2B console frontends.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "create-b2b-blueprint": "scripts/create-blueprint.mjs"
+  },
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "scaffold": "node scripts/create-blueprint.mjs",
